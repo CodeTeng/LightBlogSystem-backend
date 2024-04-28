@@ -16,6 +16,8 @@ import java.util.List;
 @Repository
 public interface ArticleMapper extends BaseMapper<Article> {
 
+    ArticleCardDTO getArticleCardById(@Param("articleId") Integer articleId);
+
     List<ArticleCardDTO> listTopAndFeaturedArticles();
 
     List<ArticleCardDTO> listArticles(@Param("current") Long current, @Param("size") Long size);

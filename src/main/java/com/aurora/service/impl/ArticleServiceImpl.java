@@ -1,6 +1,9 @@
 package com.aurora.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.aurora.config.cf.CfConstant;
+import com.aurora.config.cf.DisValue;
+import com.aurora.config.cf.RecommendUtil;
 import com.aurora.entity.*;
 import com.aurora.enums.ArticleReviewEnum;
 import com.aurora.mapper.*;
@@ -118,8 +121,34 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             articleCardDTOs = articleCardDTOs.subList(0, 3);
         }
         topAndFeaturedArticlesDTO.setTopArticle(articleCardDTOs.get(0));
-        articleCardDTOs.remove(0);
-        topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOs);
+
+
+        // 获得推荐文章Id
+        boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
+        if(notLogin){
+            articleCardDTOs.remove(0);
+            topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOs);
+        }else{
+            List<ArticleScore> list = articleScoreService.list();
+            Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
+            List<DisValue> recommends = RecommendUtil.recommend(userId, list, CfConstant.User_CF_TYPE);
+            System.out.println(recommends);
+            Long articleId1 = articleScoreService.lambdaQuery()
+                    .eq(ArticleScore::getUserId, recommends.get(0).getKeyId())
+                    .orderByDesc(ArticleScore::getScore)
+                    .list().get(0).getArticleId();
+            Long articleId2 = articleScoreService.lambdaQuery()
+                    .eq(ArticleScore::getUserId, recommends.get(1).getKeyId())
+                    .orderByDesc(ArticleScore::getScore)
+                    .list().get(0).getArticleId();
+            ArticleCardDTO article1 = articleMapper.getArticleCardById(Math.toIntExact(articleId1));
+            ArticleCardDTO article2 = articleMapper.getArticleCardById(Math.toIntExact(articleId2));
+            List<ArticleCardDTO> featuredArticles = new ArrayList<>(2);
+            featuredArticles.add(article1);
+            featuredArticles.add(article2);
+            topAndFeaturedArticlesDTO.setFeaturedArticles(featuredArticles);
+        }
+
         return topAndFeaturedArticlesDTO;
     }
 
