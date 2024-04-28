@@ -98,6 +98,10 @@ upload:
     secretKey: 密码
     bucketName: 桶的名称
 
+aliyun:
+  tong-yi:
+    api-key: 阿里云通义千问api-key
+
 website:
   url: https://前台域名
 
