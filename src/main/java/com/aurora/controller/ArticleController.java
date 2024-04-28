@@ -155,4 +155,18 @@ public class ArticleController {
         articleService.articleReview(reviewVO);
         return ResultVO.ok();
     }
+
+    @ApiOperation(value = "保存文章评分")
+    @PostMapping("/articles/score")
+    public ResultVO<Boolean> saveOrUpdateArticleScore(@RequestBody ArticleScoreDTO articleScoreDTO){
+        articleService.saveOrUpdateArticleScore(articleScoreDTO);
+        return ResultVO.ok(true);
+    }
+
+    @ApiOperation(value = "获得文章评分")
+    @GetMapping("/articles/score/{articleId}")
+    public ResultVO<Integer> getArticleScore(@PathVariable("articleId") Long articleId){
+        Integer articleScore = articleService.getArticleScore(articleId);
+        return ResultVO.ok(articleScore);
+    }
 }

@@ -8,10 +8,7 @@ import com.aurora.model.dto.*;
 import com.aurora.enums.FileExtEnum;
 import com.aurora.enums.FilePathEnum;
 import com.aurora.exception.BizException;
-import com.aurora.service.ArticleService;
-import com.aurora.service.ArticleTagService;
-import com.aurora.service.RedisService;
-import com.aurora.service.TagService;
+import com.aurora.service.*;
 import com.aurora.strategy.context.SearchStrategyContext;
 import com.aurora.strategy.context.UploadStrategyContext;
 import com.aurora.util.BeanCopyUtil;
@@ -81,6 +78,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     @Autowired
     private ScanTextUtil scanTextUtil;
+
+    @Autowired
+    private ArticleScoreService articleScoreService;
 
     @SneakyThrows
     @Override
@@ -421,6 +421,52 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                     .collect(Collectors.toList());
             articleTagService.saveBatch(articleTags);
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void saveOrUpdateArticleScore(ArticleScoreDTO articleScoreDTO) {
+        boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
+        if(notLogin){
+            throw new BizException("用户需要登录");
+        }
+
+        Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
+
+        ArticleScore articleScore = articleScoreService.lambdaQuery()
+                .eq(ArticleScore::getArticleId, articleScoreDTO.getArticleId())
+                .eq(ArticleScore::getUserId,userId )
+                .one();
+        if (Objects.nonNull(articleScore)) {
+            // 存在评分
+            articleScore.setScore(articleScoreDTO.getScore());
+            articleScoreService.updateById(articleScore);
+        }
+        else {
+            // 添加分数到数据库
+            articleScore = new ArticleScore();
+            articleScore.setArticleId(articleScoreDTO.getArticleId());
+            articleScore.setUserId(userId);
+            articleScore.setScore(articleScoreDTO.getScore());
+            articleScoreService.save(articleScore);
+        }
+
+    }
+
+    @Override
+    public Integer getArticleScore(Long articleId) {
+        boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
+        if(notLogin) return 0;
+
+        Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
+        ArticleScore articleScore = articleScoreService.lambdaQuery()
+                .eq(ArticleScore::getArticleId, articleId)
+                .eq(ArticleScore::getUserId, userId)
+                .one();
+        if(articleScore == null) {
+            return 0;
+        }
+        return articleScore.getScore();
     }
 
 }

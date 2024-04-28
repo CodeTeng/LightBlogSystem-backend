@@ -53,4 +53,16 @@ public interface ArticleService extends IService<Article> {
      * @param reviewVO
      */
     void articleReview(ArticleReviewVO reviewVO);
+
+    /**
+     * 文章评分
+     * @param articleScoreDTO
+     */
+    void saveOrUpdateArticleScore(ArticleScoreDTO articleScoreDTO);
+
+    /**
+     * 查询用户对文章的评分
+     * @param articleId 文章Id
+     */
+    Integer getArticleScore(Long articleId);
 }
