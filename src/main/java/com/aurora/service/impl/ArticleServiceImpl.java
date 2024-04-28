@@ -2,6 +2,7 @@ package com.aurora.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.aurora.entity.*;
+import com.aurora.enums.ArticleReviewEnum;
 import com.aurora.mapper.*;
 import com.aurora.model.dto.*;
 import com.aurora.enums.FileExtEnum;
@@ -15,6 +16,7 @@ import com.aurora.strategy.context.SearchStrategyContext;
 import com.aurora.strategy.context.UploadStrategyContext;
 import com.aurora.util.BeanCopyUtil;
 import com.aurora.util.PageUtil;
+import com.aurora.util.ScanTextUtil;
 import com.aurora.util.UserUtil;
 import com.aurora.model.vo.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -77,6 +79,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Autowired
     private UserInfoMapper userInfoMapper;
 
+    @Autowired
+    private ScanTextUtil scanTextUtil;
+
     @SneakyThrows
     @Override
     public TopAndFeaturedArticlesDTO listTopAndFeaturedArticles() {
@@ -123,7 +128,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     public PageResultDTO<ArticleCardDTO> listArticles() {
         LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<Article>()
                 .eq(Article::getIsDelete, 0)
-                .in(Article::getStatus, 1, 2);
+                .in(Article::getStatus, 1, 2)
+                .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
         CompletableFuture<Integer> asyncCount = CompletableFuture.supplyAsync(() -> articleMapper.selectCount(queryWrapper));
         List<ArticleCardDTO> articles = articleMapper.listArticles(PageUtil.getLimitCurrent(), PageUtil.getSize());
         return new PageResultDTO<>(articles, asyncCount.get());
@@ -270,6 +276,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             article.setCategoryId(category.getId());
         }
         article.setUserId(UserUtil.getUserDetailsDTO().getUserInfoId());
+
+        // 文章内容自动审核
+        Map<String,String> map = scanTextUtil.doScanText(article.getArticleContent());
+        if (map != null && Objects.equals(map.get("suggestion"), "pass")) {
+            article.setReview(ArticleReviewEnum.OK_REVIEW.getReview());
+        }
+
+        // 保存文章
         this.saveOrUpdate(article);
         // 保存文章标签
         saveArticleTag(articleVO, article.getId());
