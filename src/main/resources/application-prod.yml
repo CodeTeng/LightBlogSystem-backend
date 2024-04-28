@@ -101,6 +101,10 @@ upload:
 aliyun:
   tong-yi:
     api-key: 阿里云通义千问api-key
+  imageaudit:
+    accessKeyId: 用户名
+    accessKeySecret: 密钥
+    endpoint: 地址
 
 website:
   url: https://前台域名
