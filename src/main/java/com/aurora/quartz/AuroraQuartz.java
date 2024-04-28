@@ -104,14 +104,15 @@ public class AuroraQuartz {
 
     public void computerHotArticle() {
         log.info("预测热点文章开始");
-        // 1. 获取所有的文章 过滤掉已经在 redis 前5的热点文章
+        // 1. 获取所有的文章 过滤掉已经在 redis 前4的热点文章
         List<Article> articleList = articleService.list();
         Map<Object, Double> articleMap = redisService.zReverseRangeWithScore(ARTICLE_VIEWS_COUNT, 0, 4);
+        log.info("articleMap:{}", articleMap);
         List<Integer> articleIds = new ArrayList<>(articleMap.size());
         articleMap.forEach((key, value) -> articleIds.add((Integer) key));
         articleList = articleList.stream().filter(article -> !articleIds.contains(article.getId())).collect(Collectors.toList());
         if (articleList.isEmpty()) {
-            log.info("文章都为热点文章的前5，无需预测");
+            log.info("文章都为热点文章的前4，无需预测");
             return;
         }
         // 2. 计算每一个博文的得分
@@ -128,10 +129,11 @@ public class AuroraQuartz {
             // 判断文章的标题和摘要是否包含敏感词
             String articleTitle = article.getArticleTitle();
             String articleAbstract = article.getArticleAbstract();
-            if (HTMLUtil.isSensitiveWord(articleTitle) || HTMLUtil.isSensitiveWord(articleAbstract) || HTMLUtil.isSensitiveWord(articleContent)) {
-                articleScoreMap.put(article.getId(), 0D);
-                continue;
-            }
+            // TODO 判断是否包含敏感词 有敏感词 直接为0
+//            if (!HTMLUtil.isSensitiveWord(articleTitle) || !HTMLUtil.isSensitiveWord(articleAbstract) || !HTMLUtil.isSensitiveWord(articleContent)) {
+//                articleScoreMap.put(article.getId(), 0D);
+//                continue;
+//            }
             accumulateScore += 20D; // 无敏感词
             Integer isFeatured = article.getIsFeatured();
             Integer isTop = article.getIsTop();
@@ -182,6 +184,9 @@ public class AuroraQuartz {
                     // 还没有热点文章 就存入目前的得分
                     articleService.updateArticleScore(articleId, score);
                 }
+            } else {
+                // 没有90分的
+                log.info("文章id为：{}文章没有达到90分，分数为：{}", articleId, score);
             }
         }
         log.info("预测热点文章结束");

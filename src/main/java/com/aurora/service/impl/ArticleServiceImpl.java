@@ -79,8 +79,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public TopAndFeaturedArticlesDTO listTopAndFeaturedArticles() {
         TopAndFeaturedArticlesDTO topAndFeaturedArticlesDTO = new TopAndFeaturedArticlesDTO();
-        // 从 redis中获取TOP5热点文章
-        Map<Object, Double> articleMap = redisService.zReverseRangeWithScore(ARTICLE_VIEWS_COUNT, 0, 4);
+        // 从 redis中获取TOP4热点文章
+        Map<Object, Double> articleMap = redisService.zReverseRangeWithScore(ARTICLE_VIEWS_COUNT, 0, 3);
         List<Integer> articleIds = new ArrayList<>(articleMap.size());
         articleMap.forEach((key, value) -> articleIds.add((Integer) key));
         List<Article> articleList = articleMapper.selectList(new LambdaQueryWrapper<Article>()
