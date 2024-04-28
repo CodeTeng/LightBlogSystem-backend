@@ -48,4 +48,9 @@ public interface ArticleService extends IService<Article> {
      */
     void updateArticleScore(Integer articleId, Double score);
 
+    /**
+     * 审核文章
+     * @param reviewVO
+     */
+    void articleReview(ArticleReviewVO reviewVO);
 }

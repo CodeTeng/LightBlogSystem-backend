@@ -18,12 +18,14 @@ import com.aurora.util.PageUtil;
 import com.aurora.util.UserUtil;
 import com.aurora.model.vo.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.SneakyThrows;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -347,6 +349,15 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public void updateArticleScore(Integer articleId, Double score) {
         redisService.zIncr(ARTICLE_VIEWS_COUNT, articleId, score);
+    }
+
+    @Override
+    public void articleReview(ArticleReviewVO reviewVO) {
+        LambdaUpdateWrapper<Article> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper
+                .set(Article::getReview,reviewVO.getReview())
+                .eq(Article::getId,reviewVO.getArticleId());
+        articleMapper.update(null, updateWrapper);
     }
 
     private Category saveArticleCategory(ArticleVO articleVO) {

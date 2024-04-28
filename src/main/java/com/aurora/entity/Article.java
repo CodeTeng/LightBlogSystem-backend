@@ -38,6 +38,8 @@ public class Article {
 
     private Integer status;
 
+    private Integer review;
+
     private Integer type;
 
     private String password;

@@ -148,4 +148,11 @@ public class ArticleController {
     public ResultVO<List<ArticleSearchDTO>> listArticlesBySearch(ConditionVO condition) {
         return ResultVO.ok(articleService.listArticlesBySearch(condition));
     }
+
+    @ApiOperation(value = "审核文章")
+    @PostMapping("/admin/articles/review")
+    public ResultVO<?> articleReview(@RequestBody ArticleReviewVO reviewVO){
+        articleService.articleReview(reviewVO);
+        return ResultVO.ok();
+    }
 }
