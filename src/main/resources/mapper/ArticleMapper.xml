@@ -561,4 +561,68 @@
                  LEFT JOIN t_category c ON a.category_id = c.id
                  LEFT JOIN t_user_info u ON a.user_id = u.id
     </select>
+    <select id="listArticleCards" resultMap="ArticleCardDTOResultMap">
+        SELECT a.id                            AS id,
+        article_cover,
+        article_title,
+        if(article_abstract is null or article_abstract = '', SUBSTR(article_content, 1, 500), article_abstract) AS article_content,
+        is_top,
+        is_featured,
+        status,
+        type,
+        review,
+        a.create_time                   AS create_time,
+        a.update_time                   AS update_time,
+        u.nickname                      AS author_nickname,
+        u.website                       AS author_website,
+        u.avatar                        AS author_avatar,
+        c.category_name                 AS category_name,
+        tag_name
+        FROM (SELECT id,
+        user_id,
+        category_id,
+        article_cover,
+        article_abstract,
+        article_title,
+        article_content,
+        is_top,
+        is_featured,
+        is_delete,
+        status,
+        create_time,
+        update_time
+        FROM t_article
+        <where>
+            <if test="isDelete==true">
+                is_delete = 1 and
+            </if>
+
+            <if test="isDelete==false">
+                is_delete = 0 and
+            </if>
+            <if test="status!=null">
+                status in
+                <foreach collection="status" item="item" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+                and
+            </if>
+            <if test="review!=null">
+                review = #{review} and
+            </if>
+            <foreach collection="mapList" item="item" separator=" and ">
+                ${item.key} = #{item.value}
+            </foreach>
+        </where>
+        order by id desc
+        <if test="page!=null and size!=null and page gte 0 and size gte 0">
+            LIMIT ${(page-1)*size} , ${size}
+        </if>
+        ) a
+        LEFT JOIN t_article_tag at
+        ON a.id = at.article_id
+        LEFT JOIN t_tag t ON t.id = at.tag_id
+        LEFT JOIN t_category c ON a.category_id = c.id
+        LEFT JOIN t_user_info u ON a.user_id = u.id
+    </select>
 </mapper>

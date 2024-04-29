@@ -36,6 +36,10 @@ public class ArticleCardDTO {
 
     private Integer status;
 
+    private Integer type;
+
+    private Integer review;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
