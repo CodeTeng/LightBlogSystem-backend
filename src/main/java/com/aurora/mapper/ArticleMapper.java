@@ -42,5 +42,6 @@ public interface ArticleMapper extends BaseMapper<Article> {
 
     List<ArticleStatisticsDTO> listArticleStatistics();
 
+    List<ArticleStatisticsDTO> listUserArticleStatistics(@Param("userId") Integer userId);
 }
 

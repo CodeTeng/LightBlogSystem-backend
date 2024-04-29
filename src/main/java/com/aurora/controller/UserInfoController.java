@@ -3,10 +3,12 @@ package com.aurora.controller;
 import com.aurora.annotation.OptLog;
 import com.aurora.exception.BizException;
 import com.aurora.model.dto.PageResultDTO;
+import com.aurora.model.dto.UserForegroundDTO;
 import com.aurora.model.dto.UserInfoDTO;
 import com.aurora.model.dto.UserOnlineDTO;
 import com.aurora.service.UserInfoService;
 import com.aurora.model.vo.*;
+import com.aurora.util.UserUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -109,5 +111,11 @@ public class UserInfoController {
     @GetMapping("/users/info/{userInfoId}")
     public ResultVO<UserInfoDTO> getUserInfoById(@PathVariable("userInfoId") Integer userInfoId) {
         return ResultVO.ok(userInfoService.getUserInfoById(userInfoId));
+    }
+
+    @ApiOperation("获取个人用户前台信息")
+    @GetMapping("/users/foreground")
+    public ResultVO<UserForegroundDTO> getUserForegroundInfo() {
+        return ResultVO.ok(userInfoService.getUserForegroundInfo());
     }
 }

@@ -1,17 +1,13 @@
 package com.aurora.service.impl;
 
 import com.aurora.constant.CommonConstant;
+import com.aurora.entity.*;
 import com.aurora.enums.LoginTypeEnum;
 import com.aurora.enums.RoleEnum;
-import com.aurora.mapper.UserRoleMapper;
+import com.aurora.mapper.*;
 import com.aurora.model.dto.*;
-import com.aurora.entity.UserAuth;
-import com.aurora.entity.UserInfo;
-import com.aurora.entity.UserRole;
 import com.aurora.enums.FilePathEnum;
 import com.aurora.exception.BizException;
-import com.aurora.mapper.UserAuthMapper;
-import com.aurora.mapper.UserInfoMapper;
 import com.aurora.service.*;
 import com.aurora.strategy.context.UploadStrategyContext;
 import com.aurora.util.BeanCopyUtil;
@@ -30,6 +26,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.aurora.constant.CommonConstant.FALSE;
+import static com.aurora.constant.CommonConstant.TRUE;
 import static com.aurora.constant.RedisConstant.USER_CODE_KEY;
 import static com.aurora.util.CommonUtil.checkEmail;
 import static com.aurora.util.PageUtil.getLimitCurrent;
@@ -62,6 +60,21 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
 
     @Autowired
     private UserRoleMapper userRoleMapper;
+
+    @Autowired
+    private CommentMapper commentMapper;
+
+    @Autowired
+    private ArticleMapper articleMapper;
+
+    @Autowired
+    private CategoryMapper categoryMapper;
+
+    @Autowired
+    private TagMapper tagMapper;
+
+    @Autowired
+    private ArticleTagMapper articleTagMapper;
 
 
     @Transactional(rollbackFor = Exception.class)
@@ -242,6 +255,62 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
                 .loginType(LoginTypeEnum.EMAIL.getType())
                 .build();
         userAuthMapper.insert(userAuth);
+    }
+
+    @Override
+    public UserForegroundDTO getUserForegroundInfo() {
+        UserForegroundDTO userForegroundDTO = new UserForegroundDTO();
+        UserDetailsDTO userDetailsDTO = UserUtil.getUserDetailsDTO();
+        if (userDetailsDTO == null) {
+            throw new BizException("用户未登录");
+        }
+        Integer userId = userDetailsDTO.getUserInfoId();
+        Integer messageCount = commentMapper.selectCount(new LambdaQueryWrapper<Comment>().eq(Comment::getIsDelete, FALSE)
+                .eq(Comment::getType, 2).eq(Comment::getUserId, userId));
+        userForegroundDTO.setMessageCount(messageCount);
+        List<Article> articleList = articleMapper.selectList(new LambdaQueryWrapper<Article>().eq(Article::getIsDelete, FALSE).eq(Article::getUserId, userId));
+        if (articleList.isEmpty()) {
+            userForegroundDTO.setArticleCount(0);
+            userForegroundDTO.setTopArticleCount(0);
+            userForegroundDTO.setFeaturedArticleCount(0);
+            userForegroundDTO.setPublishedArticleCount(0);
+            userForegroundDTO.setPrivacyArticleCount(0);
+            userForegroundDTO.setDraftCount(0);
+            userForegroundDTO.setArticleStatisticsDTOs(new ArrayList<>());
+            userForegroundDTO.setCategoryDTOs(new ArrayList<>());
+            userForegroundDTO.setTagDTOs(new ArrayList<>());
+        } else {
+            // 获取所有文章
+            long articleCount = articleList.stream().filter(article -> !article.getStatus().equals(3)).count();
+            userForegroundDTO.setArticleCount((int) articleCount);
+            // 获取置顶文章数量
+            long topArticleCount = articleList.stream().filter(article -> !article.getStatus().equals(3))
+                    .filter(article -> article.getIsTop().equals(TRUE)).count();
+            userForegroundDTO.setTopArticleCount((int) topArticleCount);
+            // 获取推荐文章的数量
+            long featuredArticleCount = articleList.stream().filter(article -> !article.getStatus().equals(3))
+                    .filter(article -> article.getIsFeatured().equals(TRUE)).count();
+            userForegroundDTO.setFeaturedArticleCount((int) featuredArticleCount);
+            // 获取公开的文章数量
+            long publishArticleCount = articleList.stream().filter(article -> article.getStatus().equals(1)).count();
+            userForegroundDTO.setPublishedArticleCount((int) publishArticleCount);
+            // 获取私密文章数量
+            long privacyArticleCount = articleList.stream().filter(article -> article.getStatus().equals(2)).count();
+            userForegroundDTO.setPrivacyArticleCount((int) privacyArticleCount);
+            // 获取草稿文章数量
+            long draftCount = articleList.stream().filter(article -> article.getStatus().equals(3)).count();
+            userForegroundDTO.setDraftCount((int) draftCount);
+            // 获取用户贡献度
+            List<ArticleStatisticsDTO> articleStatisticsDTOs = articleMapper.listUserArticleStatistics(userId);
+            userForegroundDTO.setArticleStatisticsDTOs(articleStatisticsDTOs);
+            // 获取文章的分类列表
+            List<CategoryDTO> categoryDTOs = categoryMapper.listUserCategories(userId);
+            userForegroundDTO.setCategoryDTOs(categoryDTOs);
+            // 获取文章Top10的标签列表
+            List<TagDTO> tagDTOs = BeanCopyUtil.copyList(tagMapper.listUserTopTenTags(userId), TagDTO.class);
+            userForegroundDTO.setTagDTOs(tagDTOs);
+        }
+        return userForegroundDTO;
     }
 
     private Boolean checkUser(AddUserVO addUserVO) {

@@ -1,9 +1,6 @@
 package com.aurora.service;
 
-import com.aurora.model.dto.PageResultDTO;
-import com.aurora.model.dto.UserAgeDTO;
-import com.aurora.model.dto.UserInfoDTO;
-import com.aurora.model.dto.UserOnlineDTO;
+import com.aurora.model.dto.*;
 import com.aurora.entity.UserInfo;
 import com.aurora.model.vo.*;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -44,4 +41,9 @@ public interface UserInfoService extends IService<UserInfo> {
      * @param addUserVO 添加用户请求体
      */
     void saveUserRole(AddUserVO addUserVO);
+
+    /**
+     * 获取个人用户前台信息
+     */
+    UserForegroundDTO getUserForegroundInfo();
 }

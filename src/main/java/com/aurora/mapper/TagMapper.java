@@ -28,4 +28,6 @@ public interface TagMapper extends BaseMapper<Tag> {
      * @return 标签集合
      */
     List<Tag> listTagByArticleId(Integer articleId);
+
+    List<TagDTO> listUserTopTenTags(@Param("userId") Integer userId);
 }

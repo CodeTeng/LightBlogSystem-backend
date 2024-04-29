@@ -516,4 +516,12 @@
         GROUP BY date
         ORDER BY date DESC
     </select>
+    <select id="listUserArticleStatistics" resultType="com.aurora.model.dto.ArticleStatisticsDTO">
+        SELECT DATE_FORMAT(create_time, "%Y-%m-%d") AS date,
+               COUNT(1)                             AS count
+        FROM t_article
+        where user_id = #{userId}
+        GROUP BY date
+        ORDER BY date DESC
+    </select>
 </mapper>
