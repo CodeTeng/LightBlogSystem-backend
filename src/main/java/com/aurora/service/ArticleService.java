@@ -65,4 +65,11 @@ public interface ArticleService extends IService<Article> {
      * @param articleId 文章Id
      */
     Integer getArticleScore(Long articleId);
+
+    /**
+     * 前台：获得用户文章
+     * @param userId
+     * @return
+     */
+    PageResultDTO<ArticleCardDTO> listArticlesByUserId(Integer userId);
 }

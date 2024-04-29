@@ -169,4 +169,10 @@ public class ArticleController {
         Integer articleScore = articleService.getArticleScore(articleId);
         return ResultVO.ok(articleScore);
     }
+
+    @ApiOperation("获取用户文章列表")
+    @GetMapping("/articles/list/{userId}")
+    public ResultVO<PageResultDTO<ArticleCardDTO>> listArticlesByUserId(@PathVariable("userId") Integer userId) {
+        return ResultVO.ok(articleService.listArticlesByUserId(userId));
+    }
 }

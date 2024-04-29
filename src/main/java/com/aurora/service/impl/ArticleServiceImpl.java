@@ -6,6 +6,7 @@ import com.aurora.config.cf.DisValue;
 import com.aurora.config.cf.RecommendUtil;
 import com.aurora.entity.*;
 import com.aurora.enums.ArticleReviewEnum;
+import com.aurora.enums.ArticleStatusEnum;
 import com.aurora.mapper.*;
 import com.aurora.model.dto.*;
 import com.aurora.enums.FileExtEnum;
@@ -24,6 +25,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.SneakyThrows;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -496,6 +498,29 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             return 0;
         }
         return articleScore.getScore();
+    }
+
+    @Override
+    public PageResultDTO<ArticleCardDTO> listArticlesByUserId(Integer userId) {
+        // 判断是否为登录用户在获取文章
+        boolean isUserSelf = UserUtil.getUserDetailsDTO().getUserInfoId().equals(userId);
+
+        ArticleCardMap articleCardMap = new ArticleCardMap();
+        articleCardMap.setKey("user_id");
+        articleCardMap.setValue(Integer.toString(userId));
+        List<ArticleCardMap> map = new ArrayList<>();
+        map.add(articleCardMap);
+        List<ArticleCardDTO> articleCardDTOS = null;
+        if(isUserSelf){
+            articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
+                    null, null, map);
+        }else{
+            // 查看别人的文章
+            articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
+                    getStatusList(PUBLIC, SECRET), ArticleReviewEnum.OK_REVIEW.getReview(), map);
+        }
+
+        return new PageResultDTO<>(articleCardDTOS, articleCardDTOS.size());
     }
 
 }
