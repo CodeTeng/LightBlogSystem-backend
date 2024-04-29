@@ -44,4 +44,11 @@ public interface UserInfoService extends IService<UserInfo> {
      * @param addUserVO 添加用户请求体
      */
     void saveUserRole(AddUserVO addUserVO);
+
+    /**
+     * 获取用户展示框的信息
+     * @param userInfoId
+     * @return
+     */
+    UserShowVO getUserShowById(Integer userInfoId);
 }

@@ -1,17 +1,13 @@
 package com.aurora.service.impl;
 
 import com.aurora.constant.CommonConstant;
+import com.aurora.entity.*;
 import com.aurora.enums.LoginTypeEnum;
 import com.aurora.enums.RoleEnum;
-import com.aurora.mapper.UserRoleMapper;
+import com.aurora.mapper.*;
 import com.aurora.model.dto.*;
-import com.aurora.entity.UserAuth;
-import com.aurora.entity.UserInfo;
-import com.aurora.entity.UserRole;
 import com.aurora.enums.FilePathEnum;
 import com.aurora.exception.BizException;
-import com.aurora.mapper.UserAuthMapper;
-import com.aurora.mapper.UserInfoMapper;
 import com.aurora.service.*;
 import com.aurora.strategy.context.UploadStrategyContext;
 import com.aurora.util.BeanCopyUtil;
@@ -62,6 +58,12 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
 
     @Autowired
     private UserRoleMapper userRoleMapper;
+
+    @Autowired
+    private ArticleService articleService;
+
+    @Autowired
+    private TalkService talkService;
 
 
     @Transactional(rollbackFor = Exception.class)
@@ -242,6 +244,19 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
                 .loginType(LoginTypeEnum.EMAIL.getType())
                 .build();
         userAuthMapper.insert(userAuth);
+    }
+
+    @Override
+    public UserShowVO getUserShowById(Integer userInfoId) {
+        UserShowVO userShowVO = new UserShowVO();
+        Integer articlesCount = articleService.lambdaQuery().eq(Article::getUserId, userInfoId).count();
+        Integer talksCount = talkService.lambdaQuery().eq(Talk::getUserId, userInfoId).count();
+        String avatar = userInfoMapper.selectById(userInfoId).getAvatar();
+        userShowVO.setArticlesCount(articlesCount);
+        userShowVO.setTalksCount(talksCount);
+        userShowVO.setUserId(userInfoId);
+        userShowVO.setAvatar(avatar);
+        return userShowVO;
     }
 
     private Boolean checkUser(AddUserVO addUserVO) {
