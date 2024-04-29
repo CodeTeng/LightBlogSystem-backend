@@ -124,6 +124,8 @@ public class AuroraInfoServiceImpl implements AuroraInfoService {
         List<UniqueViewDTO> uniqueViews = uniqueViewService.listUniqueViews();
         List<ArticleStatisticsDTO> articleStatisticsDTOs = articleMapper.listArticleStatistics();
         List<CategoryDTO> categoryDTOs = categoryMapper.listCategories();
+        List<TagDTO> tagDTOList = tagMapper.listTags();
+        List<TagDTO> tagTopTenList = tagMapper.listTopTenTags();
         List<TagDTO> tagDTOs = BeanCopyUtil.copyList(tagMapper.selectList(null), TagDTO.class);
         Map<Object, Double> articleMap = redisService.zReverseRangeWithScore(ARTICLE_VIEWS_COUNT, 0, 4);
         List<UserActiveDTO> userActiveData = userAuthService.selectUserActiveData();
@@ -132,6 +134,8 @@ public class AuroraInfoServiceImpl implements AuroraInfoService {
         AuroraAdminInfoDTO auroraAdminInfoDTO = AuroraAdminInfoDTO.builder()
                 .articleStatisticsDTOs(articleStatisticsDTOs)
                 .tagDTOs(tagDTOs)
+                .tagDTOList(tagDTOList)
+                .tagTopTenList(tagTopTenList)
                 .viewsCount(viewsCount)
                 .messageCount(messageCount)
                 .userCount(userCount)
