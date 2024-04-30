@@ -169,7 +169,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @SneakyThrows
     @Override
     public PageResultDTO<ArticleCardDTO> listArticlesByCategoryId(Integer categoryId) {
-        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<Article>().eq(Article::getCategoryId, categoryId);
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<Article>()
+                .eq(Article::getCategoryId, categoryId)
+                .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
         CompletableFuture<Integer> asyncCount = CompletableFuture.supplyAsync(() -> articleMapper.selectCount(queryWrapper));
         List<ArticleCardDTO> articles = articleMapper.getArticlesByCategoryId(PageUtil.getLimitCurrent(), PageUtil.getSize(), categoryId);
         return new PageResultDTO<>(articles, asyncCount.get());
@@ -180,6 +182,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     public ArticleDTO getArticleById(Integer articleId) {
         Article articleForCheck = articleMapper.selectOne(new LambdaQueryWrapper<Article>().eq(Article::getId, articleId));
         if (Objects.isNull(articleForCheck)) {
+            return null;
+        }
+        // 未通过审核
+        if (articleForCheck.getReview() == 0) {
             return null;
         }
         if (articleForCheck.getStatus().equals(2)) {
@@ -238,10 +244,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @SneakyThrows
     @Override
     public PageResultDTO<ArticleCardDTO> listArticlesByTagId(Integer tagId) {
-        LambdaQueryWrapper<ArticleTag> queryWrapper = new LambdaQueryWrapper<ArticleTag>().eq(ArticleTag::getTagId, tagId);
-        CompletableFuture<Integer> asyncCount = CompletableFuture.supplyAsync(() -> articleTagMapper.selectCount(queryWrapper));
+        // 获取通过审核的文章的数量
+        Integer count =  articleTagMapper.getCountByTagId(tagId);
         List<ArticleCardDTO> articles = articleMapper.listArticlesByTagId(PageUtil.getLimitCurrent(), PageUtil.getSize(), tagId);
-        return new PageResultDTO<>(articles, asyncCount.get());
+        return new PageResultDTO<>(articles, count);
     }
 
     @SneakyThrows

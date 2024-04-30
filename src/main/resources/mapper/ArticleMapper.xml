@@ -99,7 +99,7 @@
           and a.status in (1, 2)
         order by is_top desc, is_featured desc
     </select>
-    <select id="listArticles" resultMap="ArticleCardDTOResultMap">
+        <select id="listArticles" resultMap="ArticleCardDTOResultMap">
         SELECT a.id                            AS id,
                article_cover,
                article_title,
@@ -150,6 +150,8 @@
                is_top,
                is_featured,
                status,
+               type,
+               review,
                a.create_time                   AS create_time,
                a.update_time                   AS update_time,
                u.nickname                      AS author_nickname,
@@ -168,12 +170,15 @@
                      is_featured,
                      is_delete,
                      status,
+                     type,
+                     review,
                      create_time,
                      update_time
               FROM t_article
               WHERE category_id = #{categoryId}
                 and is_delete = 0
                 and status in (1, 2)
+                and review = 1
               order by id desc
               LIMIT #{current} , #{size}) a
                  LEFT JOIN t_article_tag at
