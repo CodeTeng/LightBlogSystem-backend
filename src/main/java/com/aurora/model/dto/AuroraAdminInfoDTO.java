@@ -24,6 +24,10 @@ public class AuroraAdminInfoDTO {
 
     private List<CategoryDTO> categoryDTOs;
 
+    private List<TagDTO> tagDTOList;
+
+    private List<TagDTO> tagTopTenList;
+
     private List<TagDTO> tagDTOs;
 
     private List<ArticleStatisticsDTO> articleStatisticsDTOs;

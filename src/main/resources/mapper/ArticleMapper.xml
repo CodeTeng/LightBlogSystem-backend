@@ -134,7 +134,6 @@
               FROM t_article
               where is_delete = 0
                 and status in (1, 2)
-                and review = 1
               order by id desc
               LIMIT #{current} , #{size}) a
                  LEFT JOIN t_article_tag at

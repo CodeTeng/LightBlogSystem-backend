@@ -32,4 +32,16 @@
         c.id
         LIMIT #{current},#{size}
     </select>
+    <select id="listUserCategories" resultType="com.aurora.model.dto.CategoryDTO">
+        SELECT c.id,
+               c.category_name,
+               COUNT(a.id) AS article_count
+        FROM t_category c
+                 LEFT JOIN (SELECT *
+                            FROM t_article
+                            WHERE is_delete = 0
+                              and user_id = #{userId}
+                              and status in (1, 2)) a ON c.id = a.category_id
+        GROUP BY c.id
+    </select>
 </mapper>

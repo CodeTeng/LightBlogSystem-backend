@@ -60,5 +60,6 @@ public interface ArticleMapper extends BaseMapper<Article> {
                                           @Param("map") List<ArticleCardMap> mapList
                                           );
 
+    List<ArticleStatisticsDTO> listUserArticleStatistics(@Param("userId") Integer userId);
 }
 
