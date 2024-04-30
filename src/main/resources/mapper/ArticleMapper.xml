@@ -53,7 +53,6 @@
         <result property="isDelete" column="is_delete"/>
         <result property="status" column="status"/>
         <result property="type" column="type"/>
-        <result property="review" column="review"/>
         <result property="createTime" column="create_time"/>
         <result property="categoryName" column="category_name"/>
         <collection property="tagDTOs" ofType="com.aurora.model.dto.TagDTO">
@@ -108,6 +107,8 @@
                is_top,
                is_featured,
                status,
+               type,
+               review,
                a.create_time                   AS create_time,
                a.update_time                   AS update_time,
                u.nickname                      AS author_nickname,
@@ -126,6 +127,8 @@
                      is_featured,
                      is_delete,
                      status,
+                     type,
+                     review,
                      create_time,
                      update_time
               FROM t_article
@@ -404,7 +407,6 @@
         WHERE at.tag_id = #{tagId}
           and a.is_delete = 0
           and status in (1, 2)
-          and review = 1
         LIMIT #{current} , #{size}
     </select>
     <select id="listArchives" resultType="com.aurora.model.dto.ArticleCardDTO">
@@ -455,7 +457,6 @@
         a.is_delete,
         a.status,
         a.type,
-        a.review,
         a.create_time,
         category_name,
         t.id AS tag_id,
@@ -471,7 +472,6 @@
         is_delete,
         status,
         type,
-        review,
         create_time,
         category_id
         FROM
@@ -626,5 +626,13 @@
         LEFT JOIN t_tag t ON t.id = at.tag_id
         LEFT JOIN t_category c ON a.category_id = c.id
         LEFT JOIN t_user_info u ON a.user_id = u.id
+    </select>
+    <select id="listUserArticleStatistics" resultType="com.aurora.model.dto.ArticleStatisticsDTO">
+        SELECT DATE_FORMAT(create_time, "%Y-%m-%d") AS date,
+               COUNT(1)                             AS count
+        FROM t_article
+        where user_id = #{userId}
+        GROUP BY date
+        ORDER BY date DESC
     </select>
 </mapper>
