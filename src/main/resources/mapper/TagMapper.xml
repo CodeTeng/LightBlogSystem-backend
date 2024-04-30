@@ -13,6 +13,7 @@
                      LEFT JOIN t_article a ON at.article_id = a.id
             WHERE a.is_delete = 0
               AND a.STATUS in (1, 2)
+              AND a.review = 1
         ) aat ON t.id = aat.tag_id
         GROUP BY t.id
     </select>
@@ -28,6 +29,7 @@
                      LEFT JOIN t_article a ON at.article_id = a.id
             WHERE a.is_delete = 0
               AND a.STATUS in (1, 2)
+              AND a.review = 1
         ) aat ON t.id = aat.tag_id
         GROUP BY t.id
         LIMIT 0, 10
