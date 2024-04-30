@@ -91,31 +91,36 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public TopAndFeaturedArticlesDTO listTopAndFeaturedArticles() {
         TopAndFeaturedArticlesDTO topAndFeaturedArticlesDTO = new TopAndFeaturedArticlesDTO();
-        // 从 redis中获取TOP4热点文章
-        Map<Object, Double> articleMap = redisService.zReverseRangeWithScore(ARTICLE_VIEWS_COUNT, 0, 3);
-        List<Integer> articleIds = new ArrayList<>(articleMap.size());
-        articleMap.forEach((key, value) -> articleIds.add((Integer) key));
-        List<Article> articleList = articleMapper.selectList(new LambdaQueryWrapper<Article>()
-                .eq(Article::getIsDelete, 0).in(Article::getStatus, 1, 2)
-                .in(Article::getId, articleIds));
-        List<ArticleCardDTO> hotArticles = new ArrayList<>(articleList.size());
-        if (!articleList.isEmpty()) {
-            hotArticles = articleList.stream().map(article -> {
-                ArticleCardDTO articleCardDTO = BeanCopyUtil.copyObject(article, ArticleCardDTO.class);
-                UserInfo userInfo = userInfoMapper.selectById(article.getUserId());
-                if (userInfo != null) {
-                    articleCardDTO.setAuthor(userInfo);
-                }
-                Category category = categoryMapper.selectById(article.getCategoryId());
-                if (category != null) {
-                    articleCardDTO.setCategoryName(category.getCategoryName());
-                }
-                List<Tag> tags = tagMapper.listTagByArticleId(article.getId());
-                articleCardDTO.setTags(tags);
-                return articleCardDTO;
-            }).collect(Collectors.toList());
+        // 从 redis中获取TOP10热点文章
+        Map<Object, Double> articleMap = redisService.zReverseRangeWithScore(ARTICLE_VIEWS_COUNT, 0, 9);
+        if (articleMap == null || articleMap.isEmpty()) {
+            topAndFeaturedArticlesDTO.setHotArticles(new ArrayList<>());
+        } else {
+            List<Integer> articleIds = new ArrayList<>(articleMap.size());
+            articleMap.forEach((key, value) -> articleIds.add((Integer) key));
+            List<Article> articleList = articleMapper.selectList(new LambdaQueryWrapper<Article>()
+                    .eq(Article::getIsDelete, 0).eq(Article::getReview, 1)
+                    .in(Article::getStatus, 1, 2)
+                    .in(Article::getId, articleIds));
+            List<ArticleCardDTO> hotArticles = new ArrayList<>(articleList.size());
+            if (!articleList.isEmpty()) {
+                hotArticles = articleList.stream().map(article -> {
+                    ArticleCardDTO articleCardDTO = BeanCopyUtil.copyObject(article, ArticleCardDTO.class);
+                    UserInfo userInfo = userInfoMapper.selectById(article.getUserId());
+                    if (userInfo != null) {
+                        articleCardDTO.setAuthor(userInfo);
+                    }
+                    Category category = categoryMapper.selectById(article.getCategoryId());
+                    if (category != null) {
+                        articleCardDTO.setCategoryName(category.getCategoryName());
+                    }
+                    List<Tag> tags = tagMapper.listTagByArticleId(article.getId());
+                    articleCardDTO.setTags(tags);
+                    return articleCardDTO;
+                }).collect(Collectors.toList());
+            }
+            topAndFeaturedArticlesDTO.setHotArticles(hotArticles);
         }
-        topAndFeaturedArticlesDTO.setHotArticles(hotArticles);
         List<ArticleCardDTO> articleCardDTOs = articleMapper.listTopAndFeaturedArticles();
         if (articleCardDTOs.isEmpty()) {
             return topAndFeaturedArticlesDTO;
@@ -124,13 +129,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         topAndFeaturedArticlesDTO.setTopArticle(articleCardDTOs.get(0));
 
-
         // 获得推荐文章Id
         boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
-        if(notLogin){
+        if (notLogin) {
             articleCardDTOs.remove(0);
             topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOs);
-        }else{
+        } else {
             List<ArticleScore> list = articleScoreService.list();
             Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
             List<DisValue> recommends = RecommendUtil.recommend(userId, list, CfConstant.User_CF_TYPE);
@@ -150,7 +154,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             featuredArticles.add(article2);
             topAndFeaturedArticlesDTO.setFeaturedArticles(featuredArticles);
         }
-
         return topAndFeaturedArticlesDTO;
     }
 
@@ -309,7 +312,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setUserId(UserUtil.getUserDetailsDTO().getUserInfoId());
 
         // 文章内容自动审核
-        Map<String,String> map = scanTextUtil.doScanText(article.getArticleContent());
+        Map<String, String> map = scanTextUtil.doScanText(article.getArticleContent());
         if (map != null && Objects.equals(map.get("suggestion"), "pass")) {
             article.setReview(ArticleReviewEnum.OK_REVIEW.getReview());
         }
@@ -400,8 +403,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     public void articleReview(ArticleReviewVO reviewVO) {
         LambdaUpdateWrapper<Article> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper
-                .set(Article::getReview,reviewVO.getReview())
-                .eq(Article::getId,reviewVO.getArticleId());
+                .set(Article::getReview, reviewVO.getReview())
+                .eq(Article::getId, reviewVO.getArticleId());
         articleMapper.update(null, updateWrapper);
     }
 
@@ -458,7 +461,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdateArticleScore(ArticleScoreDTO articleScoreDTO) {
         boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
-        if(notLogin){
+        if (notLogin) {
             throw new BizException("用户需要登录");
         }
 
@@ -466,14 +469,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
         ArticleScore articleScore = articleScoreService.lambdaQuery()
                 .eq(ArticleScore::getArticleId, articleScoreDTO.getArticleId())
-                .eq(ArticleScore::getUserId,userId )
+                .eq(ArticleScore::getUserId, userId)
                 .one();
         if (Objects.nonNull(articleScore)) {
             // 存在评分
             articleScore.setScore(articleScoreDTO.getScore());
             articleScoreService.updateById(articleScore);
-        }
-        else {
+        } else {
             // 添加分数到数据库
             articleScore = new ArticleScore();
             articleScore.setArticleId(articleScoreDTO.getArticleId());
@@ -487,14 +489,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public Integer getArticleScore(Long articleId) {
         boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
-        if(notLogin) return 0;
+        if (notLogin) return 0;
 
         Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
         ArticleScore articleScore = articleScoreService.lambdaQuery()
                 .eq(ArticleScore::getArticleId, articleId)
                 .eq(ArticleScore::getUserId, userId)
                 .one();
-        if(articleScore == null) {
+        if (articleScore == null) {
             return 0;
         }
         return articleScore.getScore();
@@ -511,10 +513,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         List<ArticleCardMap> map = new ArrayList<>();
         map.add(articleCardMap);
         List<ArticleCardDTO> articleCardDTOS = null;
-        if(isUserSelf){
+        if (isUserSelf) {
             articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
                     null, null, map);
-        }else{
+        } else {
             // 查看别人的文章
             articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
                     getStatusList(PUBLIC, SECRET), ArticleReviewEnum.OK_REVIEW.getReview(), map);
