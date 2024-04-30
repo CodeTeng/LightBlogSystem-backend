@@ -116,5 +116,29 @@ public class TalkServiceImpl extends ServiceImpl<TalkMapper, Talk> implements Ta
         return talkBackDTO;
     }
 
+    @Override
+    public PageResultDTO<TalkDTO> listTalksByUserId(Integer userId) {
+        LambdaQueryWrapper<Talk> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Talk::getUserId, userId);
+        Integer count = talkMapper.selectCount(wrapper);
+        if (count == 0) {
+            return new PageResultDTO<>();
+        }
+        List<TalkDTO> talkDTOs = talkMapper.listTalks(PageUtil.getLimitCurrent(), PageUtil.getSize());
+        List<Integer> talkIds = talkDTOs.stream()
+                .map(TalkDTO::getId)
+                .collect(Collectors.toList());
+        Map<Integer, Integer> commentCountMap = commentMapper.listCommentCountByTypeAndTopicIds(CommentTypeEnum.TALK.getType(), talkIds)
+                .stream()
+                .collect(Collectors.toMap(CommentCountDTO::getId, CommentCountDTO::getCommentCount));
+        talkDTOs.forEach(item -> {
+            item.setCommentCount(commentCountMap.get(item.getId()));
+            if (Objects.nonNull(item.getImages())) {
+                item.setImgs(CommonUtil.castList(JSON.parseObject(item.getImages(), List.class), String.class));
+            }
+        });
+        return new PageResultDTO<>(talkDTOs, count);
+    }
+
 }
 

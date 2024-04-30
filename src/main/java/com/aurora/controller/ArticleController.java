@@ -148,4 +148,31 @@ public class ArticleController {
     public ResultVO<List<ArticleSearchDTO>> listArticlesBySearch(ConditionVO condition) {
         return ResultVO.ok(articleService.listArticlesBySearch(condition));
     }
+
+    @ApiOperation(value = "审核文章")
+    @PostMapping("/admin/articles/review")
+    public ResultVO<?> articleReview(@RequestBody ArticleReviewVO reviewVO){
+        articleService.articleReview(reviewVO);
+        return ResultVO.ok();
+    }
+
+    @ApiOperation(value = "保存文章评分")
+    @PostMapping("/articles/score")
+    public ResultVO<Boolean> saveOrUpdateArticleScore(@RequestBody ArticleScoreDTO articleScoreDTO){
+        articleService.saveOrUpdateArticleScore(articleScoreDTO);
+        return ResultVO.ok(true);
+    }
+
+    @ApiOperation(value = "获得文章评分")
+    @GetMapping("/articles/score/{articleId}")
+    public ResultVO<Integer> getArticleScore(@PathVariable("articleId") Long articleId){
+        Integer articleScore = articleService.getArticleScore(articleId);
+        return ResultVO.ok(articleScore);
+    }
+
+    @ApiOperation("获取用户文章列表")
+    @GetMapping("/articles/list/{userId}")
+    public ResultVO<PageResultDTO<ArticleCardDTO>> listArticlesByUserId(@PathVariable("userId") Integer userId) {
+        return ResultVO.ok(articleService.listArticlesByUserId(userId));
+    }
 }

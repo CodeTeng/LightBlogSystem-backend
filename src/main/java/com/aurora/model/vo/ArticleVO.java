@@ -50,6 +50,9 @@ public class ArticleVO {
     @ApiModelProperty(name = "type", value = "文章类型", dataType = "Integer")
     private Integer type;
 
+    @ApiModelProperty(name = "review", value = "审核状态", dataType = "Integer")
+    private Integer review;
+
     @ApiModelProperty(name = "originalUrl", value = "原文链接", dataType = "String")
     private String originalUrl;
 

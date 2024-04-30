@@ -48,14 +48,14 @@ public class TalkController {
     @OptLog(optType = UPLOAD)
     @ApiOperation(value = "上传说说图片")
     @ApiImplicitParam(name = "file", value = "说说图片", required = true, dataType = "MultipartFile")
-    @PostMapping("/admin/talks/images")
+    @PostMapping({"/admin/talks/images","/talks/images"})
     public ResultVO<String> saveTalkImages(MultipartFile file) {
         return ResultVO.ok(uploadStrategyContext.executeUploadStrategy(file, FilePathEnum.TALK.getPath()));
     }
 
     @OptLog(optType = SAVE_OR_UPDATE)
     @ApiOperation(value = "保存或修改说说")
-    @PostMapping("/admin/talks")
+    @PostMapping({"/admin/talks","/talks"})
     public ResultVO<?> saveOrUpdateTalk(@Valid @RequestBody TalkVO talkVO) {
         talkService.saveOrUpdateTalk(talkVO);
         return ResultVO.ok();
@@ -63,7 +63,7 @@ public class TalkController {
 
     @OptLog(optType = DELETE)
     @ApiOperation(value = "删除说说")
-    @DeleteMapping("/admin/talks")
+    @DeleteMapping({"/admin/talks","/talks"})
     public ResultVO<?> deleteTalks(@RequestBody List<Integer> talkIds) {
         talkService.deleteTalks(talkIds);
         return ResultVO.ok();
@@ -80,6 +80,12 @@ public class TalkController {
     @GetMapping("/admin/talks/{talkId}")
     public ResultVO<TalkAdminDTO> getBackTalkById(@PathVariable("talkId") Integer talkId) {
         return ResultVO.ok(talkService.getBackTalkById(talkId));
+    }
+
+    @ApiOperation(value = "前台：查看用户的说说列表")
+    @GetMapping("/talks/list/{userId}")
+    public ResultVO<PageResultDTO<TalkDTO>> listTalksByUserId(@PathVariable("userId") Integer userId){
+        return ResultVO.ok(talkService.listTalksByUserId(userId));
     }
 
 }

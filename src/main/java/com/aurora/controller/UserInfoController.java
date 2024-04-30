@@ -113,6 +113,12 @@ public class UserInfoController {
         return ResultVO.ok(userInfoService.getUserInfoById(userInfoId));
     }
 
+    @ApiOperation("根据id获取用户展示信息")
+    @GetMapping("/users/show/{userInfoId}")
+    public ResultVO<UserShowVO> getUserShowById(@PathVariable("userInfoId") Integer userInfoId) {
+        return ResultVO.ok(userInfoService.getUserShowById(userInfoId));
+    }
+
     @ApiOperation("获取个人用户前台信息")
     @GetMapping("/users/foreground")
     public ResultVO<UserForegroundDTO> getUserForegroundInfo() {

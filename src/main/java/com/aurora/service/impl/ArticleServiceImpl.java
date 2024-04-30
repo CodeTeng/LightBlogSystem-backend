@@ -1,29 +1,35 @@
 package com.aurora.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.aurora.config.cf.CfConstant;
+import com.aurora.config.cf.DisValue;
+import com.aurora.config.cf.RecommendUtil;
 import com.aurora.entity.*;
+import com.aurora.enums.ArticleReviewEnum;
+import com.aurora.enums.ArticleStatusEnum;
 import com.aurora.mapper.*;
 import com.aurora.model.dto.*;
 import com.aurora.enums.FileExtEnum;
 import com.aurora.enums.FilePathEnum;
 import com.aurora.exception.BizException;
-import com.aurora.service.ArticleService;
-import com.aurora.service.ArticleTagService;
-import com.aurora.service.RedisService;
-import com.aurora.service.TagService;
+import com.aurora.service.*;
 import com.aurora.strategy.context.SearchStrategyContext;
 import com.aurora.strategy.context.UploadStrategyContext;
 import com.aurora.util.BeanCopyUtil;
 import com.aurora.util.PageUtil;
+import com.aurora.util.ScanTextUtil;
 import com.aurora.util.UserUtil;
 import com.aurora.model.vo.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.SneakyThrows;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,6 +81,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Autowired
     private UserInfoMapper userInfoMapper;
 
+    @Autowired
+    private ScanTextUtil scanTextUtil;
+
+    @Autowired
+    private ArticleScoreService articleScoreService;
+
     @SneakyThrows
     @Override
     public TopAndFeaturedArticlesDTO listTopAndFeaturedArticles() {
@@ -111,8 +123,34 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             articleCardDTOs = articleCardDTOs.subList(0, 3);
         }
         topAndFeaturedArticlesDTO.setTopArticle(articleCardDTOs.get(0));
-        articleCardDTOs.remove(0);
-        topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOs);
+
+
+        // 获得推荐文章Id
+        boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
+        if(notLogin){
+            articleCardDTOs.remove(0);
+            topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOs);
+        }else{
+            List<ArticleScore> list = articleScoreService.list();
+            Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
+            List<DisValue> recommends = RecommendUtil.recommend(userId, list, CfConstant.User_CF_TYPE);
+            System.out.println(recommends);
+            Long articleId1 = articleScoreService.lambdaQuery()
+                    .eq(ArticleScore::getUserId, recommends.get(0).getKeyId())
+                    .orderByDesc(ArticleScore::getScore)
+                    .list().get(0).getArticleId();
+            Long articleId2 = articleScoreService.lambdaQuery()
+                    .eq(ArticleScore::getUserId, recommends.get(1).getKeyId())
+                    .orderByDesc(ArticleScore::getScore)
+                    .list().get(0).getArticleId();
+            ArticleCardDTO article1 = articleMapper.getArticleCardById(Math.toIntExact(articleId1));
+            ArticleCardDTO article2 = articleMapper.getArticleCardById(Math.toIntExact(articleId2));
+            List<ArticleCardDTO> featuredArticles = new ArrayList<>(2);
+            featuredArticles.add(article1);
+            featuredArticles.add(article2);
+            topAndFeaturedArticlesDTO.setFeaturedArticles(featuredArticles);
+        }
+
         return topAndFeaturedArticlesDTO;
     }
 
@@ -121,7 +159,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     public PageResultDTO<ArticleCardDTO> listArticles() {
         LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<Article>()
                 .eq(Article::getIsDelete, 0)
-                .in(Article::getStatus, 1, 2);
+                .in(Article::getStatus, 1, 2)
+                .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
         CompletableFuture<Integer> asyncCount = CompletableFuture.supplyAsync(() -> articleMapper.selectCount(queryWrapper));
         List<ArticleCardDTO> articles = articleMapper.listArticles(PageUtil.getLimitCurrent(), PageUtil.getSize());
         return new PageResultDTO<>(articles, asyncCount.get());
@@ -268,6 +307,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             article.setCategoryId(category.getId());
         }
         article.setUserId(UserUtil.getUserDetailsDTO().getUserInfoId());
+
+        // 文章内容自动审核
+        Map<String,String> map = scanTextUtil.doScanText(article.getArticleContent());
+        if (map != null && Objects.equals(map.get("suggestion"), "pass")) {
+            article.setReview(ArticleReviewEnum.OK_REVIEW.getReview());
+        }
+
+        // 保存文章
         this.saveOrUpdate(article);
         // 保存文章标签
         saveArticleTag(articleVO, article.getId());
@@ -349,6 +396,15 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         redisService.zIncr(ARTICLE_VIEWS_COUNT, articleId, score);
     }
 
+    @Override
+    public void articleReview(ArticleReviewVO reviewVO) {
+        LambdaUpdateWrapper<Article> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper
+                .set(Article::getReview,reviewVO.getReview())
+                .eq(Article::getId,reviewVO.getArticleId());
+        articleMapper.update(null, updateWrapper);
+    }
+
     private Category saveArticleCategory(ArticleVO articleVO) {
         Category category = categoryMapper.selectOne(new LambdaQueryWrapper<Category>()
                 .eq(Category::getCategoryName, articleVO.getCategoryName()));
@@ -396,6 +452,75 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                     .collect(Collectors.toList());
             articleTagService.saveBatch(articleTags);
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void saveOrUpdateArticleScore(ArticleScoreDTO articleScoreDTO) {
+        boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
+        if(notLogin){
+            throw new BizException("用户需要登录");
+        }
+
+        Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
+
+        ArticleScore articleScore = articleScoreService.lambdaQuery()
+                .eq(ArticleScore::getArticleId, articleScoreDTO.getArticleId())
+                .eq(ArticleScore::getUserId,userId )
+                .one();
+        if (Objects.nonNull(articleScore)) {
+            // 存在评分
+            articleScore.setScore(articleScoreDTO.getScore());
+            articleScoreService.updateById(articleScore);
+        }
+        else {
+            // 添加分数到数据库
+            articleScore = new ArticleScore();
+            articleScore.setArticleId(articleScoreDTO.getArticleId());
+            articleScore.setUserId(userId);
+            articleScore.setScore(articleScoreDTO.getScore());
+            articleScoreService.save(articleScore);
+        }
+
+    }
+
+    @Override
+    public Integer getArticleScore(Long articleId) {
+        boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
+        if(notLogin) return 0;
+
+        Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
+        ArticleScore articleScore = articleScoreService.lambdaQuery()
+                .eq(ArticleScore::getArticleId, articleId)
+                .eq(ArticleScore::getUserId, userId)
+                .one();
+        if(articleScore == null) {
+            return 0;
+        }
+        return articleScore.getScore();
+    }
+
+    @Override
+    public PageResultDTO<ArticleCardDTO> listArticlesByUserId(Integer userId) {
+        // 判断是否为登录用户在获取文章
+        boolean isUserSelf = UserUtil.getUserDetailsDTO().getUserInfoId().equals(userId);
+
+        ArticleCardMap articleCardMap = new ArticleCardMap();
+        articleCardMap.setKey("user_id");
+        articleCardMap.setValue(Integer.toString(userId));
+        List<ArticleCardMap> map = new ArrayList<>();
+        map.add(articleCardMap);
+        List<ArticleCardDTO> articleCardDTOS = null;
+        if(isUserSelf){
+            articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
+                    null, null, map);
+        }else{
+            // 查看别人的文章
+            articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
+                    getStatusList(PUBLIC, SECRET), ArticleReviewEnum.OK_REVIEW.getReview(), map);
+        }
+
+        return new PageResultDTO<>(articleCardDTOS, articleCardDTOS.size());
     }
 
 }

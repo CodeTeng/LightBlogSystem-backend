@@ -42,4 +42,6 @@ public class ArticleAdminDTO {
 
     private Integer type;
 
+    private Integer review;
+
 }

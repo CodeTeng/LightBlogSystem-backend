@@ -25,4 +25,9 @@ public interface TalkService extends IService<Talk> {
 
     TalkAdminDTO getBackTalkById(Integer talkId);
 
+    /**
+     * 前台：通过userId获得用户的说说列表
+     * @return
+     */
+    PageResultDTO<TalkDTO> listTalksByUserId(Integer userId);
 }

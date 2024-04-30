@@ -1,9 +1,6 @@
 package com.aurora.mapper;
 
-import com.aurora.model.dto.ArticleAdminDTO;
-import com.aurora.model.dto.ArticleCardDTO;
-import com.aurora.model.dto.ArticleDTO;
-import com.aurora.model.dto.ArticleStatisticsDTO;
+import com.aurora.model.dto.*;
 import com.aurora.entity.Article;
 import com.aurora.model.vo.ConditionVO;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
@@ -11,10 +8,13 @@ import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 
 
 @Repository
 public interface ArticleMapper extends BaseMapper<Article> {
+
+    ArticleCardDTO getArticleCardById(@Param("articleId") Integer articleId);
 
     List<ArticleCardDTO> listTopAndFeaturedArticles();
 
@@ -41,6 +41,24 @@ public interface ArticleMapper extends BaseMapper<Article> {
     List<ArticleAdminDTO> listArticlesAdmin(@Param("current") Long current, @Param("size") Long size, @Param("conditionVO") ConditionVO conditionVO);
 
     List<ArticleStatisticsDTO> listArticleStatistics();
+
+    /**
+     *  查询ArticleCard列表的通用操作
+     * @param page 页数
+     * @param size 每页的数量
+     * @param isDelete 删除与否
+     * @param status 文章状态
+     * @param review 审核状态
+     * @param mapList 条件
+     * @return
+     */
+    List<ArticleCardDTO> listArticleCards(@Param("page") Long page,
+                                          @Param("size") Long size,
+                                          @Param("isDelete") boolean isDelete,
+                                          @Param("status") List<Integer> status,
+                                          @Param("review") Integer review,
+                                          @Param("map") List<ArticleCardMap> mapList
+                                          );
 
     List<ArticleStatisticsDTO> listUserArticleStatistics(@Param("userId") Integer userId);
 }

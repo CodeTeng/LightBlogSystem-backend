@@ -43,6 +43,13 @@ public interface UserInfoService extends IService<UserInfo> {
     void saveUserRole(AddUserVO addUserVO);
 
     /**
+     * 获取用户展示框的信息
+     * @param userInfoId
+     * @return
+     */
+    UserShowVO getUserShowById(Integer userInfoId);
+
+    /**
      * 获取个人用户前台信息
      */
     UserForegroundDTO getUserForegroundInfo();

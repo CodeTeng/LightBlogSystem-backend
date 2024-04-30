@@ -62,6 +62,12 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
     private UserRoleMapper userRoleMapper;
 
     @Autowired
+    private ArticleService articleService;
+
+    @Autowired
+    private TalkService talkService;
+
+    @Autowired
     private CommentMapper commentMapper;
 
     @Autowired
@@ -255,6 +261,19 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
                 .loginType(LoginTypeEnum.EMAIL.getType())
                 .build();
         userAuthMapper.insert(userAuth);
+    }
+
+    @Override
+    public UserShowVO getUserShowById(Integer userInfoId) {
+        UserShowVO userShowVO = new UserShowVO();
+        Integer articlesCount = articleService.lambdaQuery().eq(Article::getUserId, userInfoId).count();
+        Integer talksCount = talkService.lambdaQuery().eq(Talk::getUserId, userInfoId).count();
+        String avatar = userInfoMapper.selectById(userInfoId).getAvatar();
+        userShowVO.setArticlesCount(articlesCount);
+        userShowVO.setTalksCount(talksCount);
+        userShowVO.setUserId(userInfoId);
+        userShowVO.setAvatar(avatar);
+        return userShowVO;
     }
 
     @Override
