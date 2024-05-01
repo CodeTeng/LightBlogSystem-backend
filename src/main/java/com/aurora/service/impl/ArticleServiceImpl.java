@@ -225,6 +225,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         article.setPreArticleCard(asyncPreArticle.get());
         article.setNextArticleCard(asyncNextArticle.get());
+        article.getAuthor().setId(articleForCheck.getUserId());
         return article;
     }
 

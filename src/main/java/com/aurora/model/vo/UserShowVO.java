@@ -27,6 +27,21 @@ public class UserShowVO {
     private String avatar;
 
     /**
+     * 昵称
+     */
+    private String nickName;
+
+    /**
+     * 介绍
+     */
+    private String userIntro;
+
+    /**
+     * 留言数量
+     */
+    private Integer messageCount;
+
+    /**
      * 用户的文章数量
      */
     private Integer articlesCount;

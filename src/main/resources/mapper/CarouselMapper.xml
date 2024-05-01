@@ -5,12 +5,12 @@
         <resultMap id="BaseResultMap" type="com.aurora.entity.Carousel">
                     <id column="id" property="id" />
                     <result column="url" property="url" />
-                    <result column="rank" property="rank" />
+                    <result column="review" property="review" />
         </resultMap>
 
         <!-- 通用查询结果列 -->
         <sql id="Base_Column_List">
-            id, url, rank
+            id, url, review
         </sql>
 
 </mapper>
