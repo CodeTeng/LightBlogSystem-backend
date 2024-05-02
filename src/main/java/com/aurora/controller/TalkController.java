@@ -13,6 +13,8 @@ import com.aurora.model.vo.TalkVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +28,7 @@ import static com.aurora.constant.OptTypeConstant.*;
 @RestController
 public class TalkController {
 
+    private static final Logger log = LoggerFactory.getLogger(TalkController.class);
     @Autowired
     private TalkService talkService;
 
@@ -83,9 +86,10 @@ public class TalkController {
     }
 
     @ApiOperation(value = "前台：查看用户的说说列表")
-    @GetMapping("/talks/list/{userId}")
-    public ResultVO<PageResultDTO<TalkDTO>> listTalksByUserId(@PathVariable("userId") Integer userId){
-        return ResultVO.ok(talkService.listTalksByUserId(userId));
+    @GetMapping("/talks/list")
+    public ResultVO<PageResultDTO<TalkDTO>> listTalksByUserId(ConditionVO conditionVO){
+        log.info("查看用户的说说列表:{}",conditionVO);
+        return ResultVO.ok(talkService.listTalksByUserId(conditionVO));
     }
 
 }
