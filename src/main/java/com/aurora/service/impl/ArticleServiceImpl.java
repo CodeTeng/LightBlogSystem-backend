@@ -519,15 +519,24 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         map.add(articleCardMap);
         List<ArticleCardDTO> articleCardDTOS = null;
         if(isUserSelf){
-            articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
+            articleCardDTOS = articleMapper.listArticleCards(PageUtil.getCurrent(), PageUtil.getSize(), false,
                     null, null, map);
         }else{
             // 查看别人的文章
-            articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
+            articleCardDTOS = articleMapper.listArticleCards(PageUtil.getCurrent(), PageUtil.getSize(), false,
                     getStatusList(PUBLIC, SECRET), ArticleReviewEnum.OK_REVIEW.getReview(), map);
         }
 
-        return new PageResultDTO<>(articleCardDTOS, articleCardDTOS.size());
+        LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Article::getUserId, userId);
+
+        if (!isUserSelf) {
+            wrapper.in(Article::getStatus, PUBLIC.getStatus(), SECRET.getStatus());
+            wrapper.eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
+        }
+        Integer count = articleMapper.selectCount(wrapper);
+
+        return new PageResultDTO<>(articleCardDTOS, count);
     }
 
 }

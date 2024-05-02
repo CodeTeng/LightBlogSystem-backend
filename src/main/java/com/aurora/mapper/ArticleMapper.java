@@ -44,7 +44,7 @@ public interface ArticleMapper extends BaseMapper<Article> {
 
     /**
      *  查询ArticleCard列表的通用操作
-     * @param page 页数
+     * @param current 开始
      * @param size 每页的数量
      * @param isDelete 删除与否
      * @param status 文章状态
@@ -52,12 +52,12 @@ public interface ArticleMapper extends BaseMapper<Article> {
      * @param mapList 条件
      * @return
      */
-    List<ArticleCardDTO> listArticleCards(@Param("page") Long page,
+    List<ArticleCardDTO> listArticleCards(@Param("current") Long current,
                                           @Param("size") Long size,
                                           @Param("isDelete") boolean isDelete,
                                           @Param("status") List<Integer> status,
                                           @Param("review") Integer review,
-                                          @Param("map") List<ArticleCardMap> mapList
+                                          @Param("mapList") List<ArticleCardMap> mapList
                                           );
 
     List<ArticleStatisticsDTO> listUserArticleStatistics(@Param("userId") Integer userId);

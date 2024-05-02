@@ -127,6 +127,13 @@ public class ArticleController {
         return ResultVO.ok(articleService.getArticleByIdAdmin(articleId));
     }
 
+    @ApiOperation("根据id查看前台编辑文章")
+    @ApiImplicitParam(name = "articleId", value = "文章id", required = true, dataType = "Integer")
+    @GetMapping("/articles/edit/{articleId}")
+    public ResultVO<ArticleAdminViewDTO> getArticleEditById(@PathVariable("articleId") Integer articleId) {
+        return ResultVO.ok(articleService.getArticleByIdAdmin(articleId));
+    }
+
     @OptLog(optType = UPLOAD)
     @ApiOperation(value = "导入文章")
     @PostMapping("/admin/articles/import")

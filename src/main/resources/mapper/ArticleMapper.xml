@@ -596,6 +596,8 @@
         is_featured,
         is_delete,
         status,
+        type,
+        review,
         create_time,
         update_time
         FROM t_article
@@ -622,8 +624,8 @@
             </foreach>
         </where>
         order by id desc
-        <if test="page!=null and size!=null and page gte 0 and size gte 0">
-            LIMIT ${(page-1)*size} , ${size}
+        <if test="current!=null and size!=null and current gte 0 and size gte 0">
+            LIMIT #{current} , #{size}
         </if>
         ) a
         LEFT JOIN t_article_tag at
