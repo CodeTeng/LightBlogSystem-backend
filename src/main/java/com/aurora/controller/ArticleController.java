@@ -83,7 +83,7 @@ public class ArticleController {
 
     @OptLog(optType = SAVE_OR_UPDATE)
     @ApiOperation("保存和修改文章")
-    @PostMapping("/admin/articles")
+    @PostMapping({"/admin/articles","/articles"})
     public ResultVO<?> saveOrUpdateArticle(@Valid @RequestBody ArticleVO articleVO) {
         articleService.saveOrUpdateArticle(articleVO);
         return ResultVO.ok();
@@ -115,7 +115,7 @@ public class ArticleController {
     @OptLog(optType = UPLOAD)
     @ApiOperation("上传文章图片")
     @ApiImplicitParam(name = "file", value = "文章图片", required = true, dataType = "MultipartFile")
-    @PostMapping("/admin/articles/images")
+    @PostMapping({"/admin/articles/images","/articles/images"})
     public ResultVO<String> saveArticleImages(MultipartFile file) {
         return ResultVO.ok(uploadStrategyContext.executeUploadStrategy(file, FilePathEnum.ARTICLE.getPath()));
     }
