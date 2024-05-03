@@ -46,6 +46,7 @@
     </resultMap>
     <resultMap id="articleAdminResultMap" type="com.aurora.model.dto.ArticleAdminDTO">
         <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
         <result property="articleCover" column="article_cover"/>
         <result property="articleTitle" column="article_title"/>
         <result property="isTop" column="is_top"/>
@@ -53,6 +54,7 @@
         <result property="isDelete" column="is_delete"/>
         <result property="status" column="status"/>
         <result property="type" column="type"/>
+        <result property="review" column="review"/>
         <result property="createTime" column="create_time"/>
         <result property="categoryName" column="category_name"/>
         <collection property="tagDTOs" ofType="com.aurora.model.dto.TagDTO">
@@ -455,6 +457,7 @@
     <select id="listArticlesAdmin" resultMap="articleAdminResultMap">
         SELECT
         a.id,
+        a.user_id                       AS user_id,
         article_cover,
         article_title,
         is_top,
@@ -462,6 +465,7 @@
         a.is_delete,
         a.status,
         a.type,
+        a.review,
         a.create_time,
         category_name,
         t.id AS tag_id,
@@ -470,6 +474,7 @@
         (
         SELECT
         id,
+        user_id,
         article_cover,
         article_title,
         is_top,
@@ -477,6 +482,7 @@
         is_delete,
         status,
         type,
+        review,
         create_time,
         category_id
         FROM
@@ -488,6 +494,12 @@
             </if>
             <if test="conditionVO.status != null">
                 and status = #{conditionVO.status}
+            </if>
+            <if test="conditionVO.review != null">
+                and review = #{conditionVO.review}
+            </if>
+            <if test="conditionVO.userId != null">
+                and user_id = #{conditionVO.user_id}
             </if>
             <if test="conditionVO.categoryId != null">
                 and category_id = #{conditionVO.categoryId}

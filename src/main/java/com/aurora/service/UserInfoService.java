@@ -52,5 +52,5 @@ public interface UserInfoService extends IService<UserInfo> {
     /**
      * 获取个人用户前台信息
      */
-    UserForegroundDTO getUserForegroundInfo();
+    UserForegroundDTO getUserForegroundInfo(Integer userId);
 }

@@ -20,13 +20,16 @@ public class ConditionVO {
     private Long current;
 
     @ApiModelProperty(name = "size", value = "条数", dataType = "Long")
-        private Long size;
+    private Long size;
 
     @ApiModelProperty(name = "keywords", value = "搜索内容", dataType = "String")
     private String keywords;
 
     @ApiModelProperty(name = "userId", value = "用户id", dataType = "Integer")
     private Integer userId;
+
+    @ApiModelProperty(name = "review", value = "文章审核状态", dataType = "Integer")
+    private Integer review;
 
     @ApiModelProperty(name = "articleId", value = "文章id", dataType = "Integer")
     private Integer articleId;

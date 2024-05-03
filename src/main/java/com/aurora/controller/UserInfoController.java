@@ -120,8 +120,8 @@ public class UserInfoController {
     }
 
     @ApiOperation("获取个人用户前台信息")
-    @GetMapping("/users/foreground")
-    public ResultVO<UserForegroundDTO> getUserForegroundInfo() {
-        return ResultVO.ok(userInfoService.getUserForegroundInfo());
+    @GetMapping("/users/foreground/{userId}")
+    public ResultVO<UserForegroundDTO> getUserForegroundInfo(@PathVariable("userId") Integer userId) {
+        return ResultVO.ok(userInfoService.getUserForegroundInfo(userId));
     }
 }

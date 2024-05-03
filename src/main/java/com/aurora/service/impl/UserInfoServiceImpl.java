@@ -289,13 +289,8 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
     }
 
     @Override
-    public UserForegroundDTO getUserForegroundInfo() {
+    public UserForegroundDTO getUserForegroundInfo(Integer userId) {
         UserForegroundDTO userForegroundDTO = new UserForegroundDTO();
-        UserDetailsDTO userDetailsDTO = UserUtil.getUserDetailsDTO();
-        if (userDetailsDTO == null) {
-            throw new BizException("用户未登录");
-        }
-        Integer userId = userDetailsDTO.getUserInfoId();
         Integer messageCount = commentMapper.selectCount(new LambdaQueryWrapper<Comment>().eq(Comment::getIsDelete, FALSE)
                 .eq(Comment::getType, 2).eq(Comment::getUserId, userId));
         userForegroundDTO.setMessageCount(messageCount);

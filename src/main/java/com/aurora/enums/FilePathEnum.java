@@ -19,7 +19,9 @@ public enum FilePathEnum {
 
     TALK("aurora/talks/", "配置图片路径"),
 
-    MD("aurora/markdown/", "md文件路径");
+    MD("aurora/markdown/", "md文件路径"),
+
+    CAROUSEL("aurora/carousel/","轮播图路径");
 
     private final String path;
 

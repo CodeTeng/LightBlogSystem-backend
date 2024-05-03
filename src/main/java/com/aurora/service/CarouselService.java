@@ -1,6 +1,8 @@
 package com.aurora.service;
 
 import com.aurora.entity.Carousel;
+import com.aurora.model.dto.PageResultDTO;
+import com.aurora.model.vo.ConditionVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
@@ -14,7 +16,7 @@ public interface CarouselService extends IService<Carousel> {
      * 后台
      * @return
      */
-    List<Carousel> listAdminCarousels();
+    PageResultDTO<Carousel> listAdminCarousels(ConditionVO conditionVO);
 }
 
 
