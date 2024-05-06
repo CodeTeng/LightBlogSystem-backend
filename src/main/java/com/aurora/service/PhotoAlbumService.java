@@ -22,6 +22,6 @@ public interface PhotoAlbumService extends IService<PhotoAlbum> {
 
     void deletePhotoAlbumById(Integer albumId);
 
-    List<PhotoAlbumDTO> listPhotoAlbums();
+    PageResultDTO<PhotoAlbumDTO> listPhotoAlbums(ConditionVO conditionVO);
 
 }
