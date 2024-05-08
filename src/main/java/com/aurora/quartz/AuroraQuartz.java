@@ -29,6 +29,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.aurora.constant.CommonConstant.FALSE;
 import static com.aurora.constant.CommonConstant.UNKNOWN;
 import static com.aurora.constant.RedisConstant.*;
 
@@ -104,8 +105,9 @@ public class AuroraQuartz {
 
     public void computerHotArticle() {
         log.info("预测热点文章开始");
-        // 1. 获取所有的文章 过滤掉已经在 redis 前4的热点文章
-        List<Article> articleList = articleService.list();
+        // 1. 获取已经审核通过的文章 过滤掉已经在 redis 前4的热点文章
+        List<Article> articleList = articleService.list(new LambdaQueryWrapper<Article>()
+                .eq(Article::getIsDelete, FALSE).eq(Article::getReview, 1));
         Map<Object, Double> articleMap = redisService.zReverseRangeWithScore(ARTICLE_VIEWS_COUNT, 0, 4);
         log.info("articleMap:{}", articleMap);
         List<Integer> articleIds = new ArrayList<>(articleMap.size());
