@@ -6,7 +6,6 @@ import com.aurora.config.cf.DisValue;
 import com.aurora.config.cf.RecommendUtil;
 import com.aurora.entity.*;
 import com.aurora.enums.ArticleReviewEnum;
-import com.aurora.enums.ArticleStatusEnum;
 import com.aurora.mapper.*;
 import com.aurora.model.dto.*;
 import com.aurora.enums.FileExtEnum;
@@ -25,11 +24,9 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.SneakyThrows;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +37,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static com.aurora.constant.CommonConstant.FALSE;
+import static com.aurora.constant.CommonConstant.TRUE;
 import static com.aurora.constant.RabbitMQConstant.SUBSCRIBE_EXCHANGE;
 import static com.aurora.constant.RedisConstant.*;
 import static com.aurora.enums.ArticleStatusEnum.*;
@@ -308,6 +307,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdateArticle(ArticleVO articleVO) {
+        if(articleVO.getIsTop().equals(TRUE)){
+            resetArticleTop(UserUtil.getUserDetailsDTO().getUserInfoId());
+        }
         // 保存文章分类
         Category category = saveArticleCategory(articleVO);
         Article article = BeanCopyUtil.copyObject(articleVO, Article.class);
@@ -333,6 +335,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     @Override
     public void updateArticleTopAndFeatured(ArticleTopFeaturedVO articleTopFeaturedVO) {
+        Article select = articleMapper.selectById(articleTopFeaturedVO.getId());
+        if(articleTopFeaturedVO.getIsTop().equals(TRUE)){
+            resetArticleTop(select.getUserId());
+        }
         Article article = Article.builder()
                 .id(articleTopFeaturedVO.getId())
                 .isTop(articleTopFeaturedVO.getIsTop())
@@ -538,6 +544,25 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         Integer count = articleMapper.selectCount(wrapper);
 
         return new PageResultDTO<>(articleCardDTOS, count);
+    }
+
+    @Override
+    public void resetArticleTop(Integer userId) {
+        LambdaUpdateWrapper<Article> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Article::getUserId, userId).set(Article::getIsTop,FALSE);
+        articleMapper.update(null, wrapper);
+    }
+
+    @Override
+    public ArticleCardDTO getTopArticleByUserId(Integer userId) {
+        LambdaQueryWrapper<Article> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper
+                .eq(Article::getUserId, userId)
+                .eq(Article::getIsTop,TRUE)
+                .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
+        List<Article> list = this.list(lambdaQueryWrapper);
+        if(list.isEmpty()) throw new BizException("用户未设置置顶文章");
+        return articleMapper.getArticleCardById(list.get(0).getId());
     }
 
 }

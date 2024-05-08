@@ -72,4 +72,18 @@ public interface ArticleService extends IService<Article> {
      * @return
      */
     PageResultDTO<ArticleCardDTO> listArticlesByUserId(Integer userId);
+
+    /**
+     * 重置用户文章的置顶为零
+     *
+     * @param userId
+     */
+    void resetArticleTop(Integer userId);
+
+    /**
+     * 获得用户的置顶
+     * @param userId
+     * @return
+     */
+    ArticleCardDTO getTopArticleByUserId(Integer userId);
 }
