@@ -117,14 +117,14 @@ public class TalkServiceImpl extends ServiceImpl<TalkMapper, Talk> implements Ta
     }
 
     @Override
-    public PageResultDTO<TalkDTO> listTalksByUserId(Integer userId) {
+    public PageResultDTO<TalkDTO> listTalksByUserId(ConditionVO conditionVO) {
         LambdaQueryWrapper<Talk> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Talk::getUserId, userId);
+        wrapper.eq(Talk::getUserId, conditionVO.getUserId());
         Integer count = talkMapper.selectCount(wrapper);
         if (count == 0) {
             return new PageResultDTO<>();
         }
-        List<TalkDTO> talkDTOs = talkMapper.listTalks(PageUtil.getLimitCurrent(), PageUtil.getSize());
+        List<TalkDTO> talkDTOs = talkMapper.listTalksByUserId(PageUtil.getLimitCurrent(), PageUtil.getSize(),conditionVO);
         List<Integer> talkIds = talkDTOs.stream()
                 .map(TalkDTO::getId)
                 .collect(Collectors.toList());

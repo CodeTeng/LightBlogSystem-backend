@@ -80,8 +80,8 @@ public class PhotoAlbumController {
 
     @ApiOperation(value = "获取相册列表")
     @GetMapping("/photos/albums")
-    public ResultVO<List<PhotoAlbumDTO>> listPhotoAlbums() {
-        return ResultVO.ok(photoAlbumService.listPhotoAlbums());
+    public ResultVO<PageResultDTO<PhotoAlbumDTO>> listPhotoAlbums(ConditionVO conditionVO) {
+        return ResultVO.ok(photoAlbumService.listPhotoAlbums(conditionVO));
     }
 
 }

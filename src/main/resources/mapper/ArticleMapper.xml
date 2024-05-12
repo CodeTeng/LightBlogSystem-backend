@@ -46,6 +46,7 @@
     </resultMap>
     <resultMap id="articleAdminResultMap" type="com.aurora.model.dto.ArticleAdminDTO">
         <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
         <result property="articleCover" column="article_cover"/>
         <result property="articleTitle" column="article_title"/>
         <result property="isTop" column="is_top"/>
@@ -53,6 +54,7 @@
         <result property="isDelete" column="is_delete"/>
         <result property="status" column="status"/>
         <result property="type" column="type"/>
+        <result property="review" column="review"/>
         <result property="createTime" column="create_time"/>
         <result property="categoryName" column="category_name"/>
         <collection property="tagDTOs" ofType="com.aurora.model.dto.TagDTO">
@@ -99,7 +101,7 @@
           and a.status in (1, 2)
         order by is_top desc, is_featured desc
     </select>
-    <select id="listArticles" resultMap="ArticleCardDTOResultMap">
+        <select id="listArticles" resultMap="ArticleCardDTOResultMap">
         SELECT a.id                            AS id,
                article_cover,
                article_title,
@@ -107,6 +109,8 @@
                is_top,
                is_featured,
                status,
+               type,
+               review,
                a.create_time                   AS create_time,
                a.update_time                   AS update_time,
                u.nickname                      AS author_nickname,
@@ -125,11 +129,14 @@
                      is_featured,
                      is_delete,
                      status,
+                     type,
+                     review,
                      create_time,
                      update_time
               FROM t_article
               where is_delete = 0
                 and status in (1, 2)
+                and review = 1
               order by id desc
               LIMIT #{current} , #{size}) a
                  LEFT JOIN t_article_tag at
@@ -146,6 +153,8 @@
                is_top,
                is_featured,
                status,
+               type,
+               review,
                a.create_time                   AS create_time,
                a.update_time                   AS update_time,
                u.nickname                      AS author_nickname,
@@ -164,12 +173,15 @@
                      is_featured,
                      is_delete,
                      status,
+                     type,
+                     review,
                      create_time,
                      update_time
               FROM t_article
               WHERE category_id = #{categoryId}
                 and is_delete = 0
                 and status in (1, 2)
+                and review = 1
               order by id desc
               LIMIT #{current} , #{size}) a
                  LEFT JOIN t_article_tag at
@@ -445,6 +457,7 @@
     <select id="listArticlesAdmin" resultMap="articleAdminResultMap">
         SELECT
         a.id,
+        a.user_id                       AS user_id,
         article_cover,
         article_title,
         is_top,
@@ -452,6 +465,7 @@
         a.is_delete,
         a.status,
         a.type,
+        a.review,
         a.create_time,
         category_name,
         t.id AS tag_id,
@@ -460,6 +474,7 @@
         (
         SELECT
         id,
+        user_id,
         article_cover,
         article_title,
         is_top,
@@ -467,6 +482,7 @@
         is_delete,
         status,
         type,
+        review,
         create_time,
         category_id
         FROM
@@ -478,6 +494,12 @@
             </if>
             <if test="conditionVO.status != null">
                 and status = #{conditionVO.status}
+            </if>
+            <if test="conditionVO.review != null">
+                and review = #{conditionVO.review}
+            </if>
+            <if test="conditionVO.userId != null">
+                and user_id = #{conditionVO.user_id}
             </if>
             <if test="conditionVO.categoryId != null">
                 and category_id = #{conditionVO.categoryId}
@@ -586,6 +608,8 @@
         is_featured,
         is_delete,
         status,
+        type,
+        review,
         create_time,
         update_time
         FROM t_article
@@ -612,8 +636,8 @@
             </foreach>
         </where>
         order by id desc
-        <if test="page!=null and size!=null and page gte 0 and size gte 0">
-            LIMIT ${(page-1)*size} , ${size}
+        <if test="current!=null and size!=null and current gte 0 and size gte 0">
+            LIMIT #{current} , #{size}
         </if>
         ) a
         LEFT JOIN t_article_tag at

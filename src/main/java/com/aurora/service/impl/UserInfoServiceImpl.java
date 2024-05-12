@@ -2,11 +2,9 @@ package com.aurora.service.impl;
 
 import com.aurora.constant.CommonConstant;
 import com.aurora.entity.*;
-import com.aurora.enums.LoginTypeEnum;
-import com.aurora.enums.RoleEnum;
+import com.aurora.enums.*;
 import com.aurora.mapper.*;
 import com.aurora.model.dto.*;
-import com.aurora.enums.FilePathEnum;
 import com.aurora.exception.BizException;
 import com.aurora.service.*;
 import com.aurora.strategy.context.UploadStrategyContext;
@@ -266,24 +264,33 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
     @Override
     public UserShowVO getUserShowById(Integer userInfoId) {
         UserShowVO userShowVO = new UserShowVO();
-        Integer articlesCount = articleService.lambdaQuery().eq(Article::getUserId, userInfoId).count();
+        // 查询用户审核通过公开可见的文章
+        Integer articlesCount = articleService.lambdaQuery()
+                .eq(Article::getUserId, userInfoId)
+                .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview())
+                .eq(Article::getStatus, ArticleStatusEnum.PUBLIC.getStatus())
+                .count();
+        // 查询用户的说说数量
         Integer talksCount = talkService.lambdaQuery().eq(Talk::getUserId, userInfoId).count();
-        String avatar = userInfoMapper.selectById(userInfoId).getAvatar();
+        // 获得用户的留言数量
+        LambdaQueryWrapper<Comment> queryWrapper  = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Comment::getUserId, userInfoId).eq(Comment::getIsReview,1);
+        Integer messageCount = commentMapper.selectCount(queryWrapper);
+        UserInfo userInfo = userInfoMapper.selectById(userInfoId);
+
+        userShowVO.setMessageCount(messageCount);
+        userShowVO.setUserIntro(userInfo.getIntro());
         userShowVO.setArticlesCount(articlesCount);
         userShowVO.setTalksCount(talksCount);
         userShowVO.setUserId(userInfoId);
-        userShowVO.setAvatar(avatar);
+        userShowVO.setAvatar(userInfo.getAvatar());
+        userShowVO.setNickName(userInfo.getNickname());
         return userShowVO;
     }
 
     @Override
-    public UserForegroundDTO getUserForegroundInfo() {
+    public UserForegroundDTO getUserForegroundInfo(Integer userId) {
         UserForegroundDTO userForegroundDTO = new UserForegroundDTO();
-        UserDetailsDTO userDetailsDTO = UserUtil.getUserDetailsDTO();
-        if (userDetailsDTO == null) {
-            throw new BizException("用户未登录");
-        }
-        Integer userId = userDetailsDTO.getUserInfoId();
         Integer messageCount = commentMapper.selectCount(new LambdaQueryWrapper<Comment>().eq(Comment::getIsDelete, FALSE)
                 .eq(Comment::getType, 2).eq(Comment::getUserId, userId));
         userForegroundDTO.setMessageCount(messageCount);

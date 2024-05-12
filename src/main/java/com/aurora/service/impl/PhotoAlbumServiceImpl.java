@@ -99,12 +99,15 @@ public class PhotoAlbumServiceImpl extends ServiceImpl<PhotoAlbumMapper, PhotoAl
     }
 
     @Override
-    public List<PhotoAlbumDTO> listPhotoAlbums() {
-        List<PhotoAlbum> photoAlbumList = photoAlbumMapper.selectList(new LambdaQueryWrapper<PhotoAlbum>()
-                .eq(PhotoAlbum::getStatus, PUBLIC.getStatus())
-                .eq(PhotoAlbum::getIsDelete, FALSE)
+    public PageResultDTO<PhotoAlbumDTO> listPhotoAlbums(ConditionVO conditionVO) {
+        List<PhotoAlbumDTO> photoAlbumList = photoAlbumMapper
+                .listPhotoAlbums(PageUtil.getLimitCurrent(),PageUtil.getSize(),conditionVO);
+        Integer count = photoAlbumMapper.selectCount(new LambdaQueryWrapper<PhotoAlbum>()
+                .eq(PhotoAlbum::getIsDelete,FALSE)
+                .eq(PhotoAlbum::getStatus,PUBLIC)
                 .orderByDesc(PhotoAlbum::getId));
-        return BeanCopyUtil.copyList(photoAlbumList, PhotoAlbumDTO.class);
+
+        return new PageResultDTO<>(photoAlbumList, count);
     }
 
 }

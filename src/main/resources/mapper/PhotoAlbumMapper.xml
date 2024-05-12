@@ -42,4 +42,18 @@
         GROUP BY
         pa.id
     </select>
+    <select id="listPhotoAlbums" resultType="com.aurora.model.dto.PhotoAlbumDTO">
+        select
+            id,
+            album_name,
+            album_desc,
+            album_cover,
+            (select count(1) from t_photo where t_photo.album_id = t_photo_album.id) as photo_count,
+            status
+        from t_photo_album
+        where status = 1 and is_delete = 0
+        <if test="current!=null">
+            limit #{current},#{size}
+        </if>
+    </select>
 </mapper>

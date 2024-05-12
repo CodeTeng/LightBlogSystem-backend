@@ -1,12 +1,15 @@
 package com.aurora.controller;
 
 import com.aurora.annotation.OptLog;
+import com.aurora.entity.Article;
+import com.aurora.enums.ArticleReviewEnum;
 import com.aurora.model.dto.*;
 import com.aurora.enums.FilePathEnum;
 import com.aurora.service.ArticleService;
 import com.aurora.strategy.context.ArticleImportStrategyContext;
 import com.aurora.strategy.context.UploadStrategyContext;
 import com.aurora.model.vo.*;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
@@ -18,6 +21,7 @@ import javax.validation.Valid;
 
 import java.util.List;
 
+import static com.aurora.constant.CommonConstant.TRUE;
 import static com.aurora.constant.OptTypeConstant.*;
 
 @Api(tags = "文章模块")
@@ -37,6 +41,13 @@ public class ArticleController {
     public ResultVO<TopAndFeaturedArticlesDTO> listTopAndFeaturedArticles() {
         return ResultVO.ok(articleService.listTopAndFeaturedArticles());
     }
+
+    @ApiOperation("获取用户的置顶文章")
+    @GetMapping("/articles/top")
+    public ResultVO<ArticleCardDTO> getTopArticleByUserId(@RequestParam("userId") Integer userId) {
+        return ResultVO.ok(articleService.getTopArticleByUserId(userId));
+    }
+
 
     @ApiOperation("获取所有文章")
     @GetMapping("/articles/all")
@@ -83,7 +94,7 @@ public class ArticleController {
 
     @OptLog(optType = SAVE_OR_UPDATE)
     @ApiOperation("保存和修改文章")
-    @PostMapping("/admin/articles")
+    @PostMapping({"/admin/articles","/articles"})
     public ResultVO<?> saveOrUpdateArticle(@Valid @RequestBody ArticleVO articleVO) {
         articleService.saveOrUpdateArticle(articleVO);
         return ResultVO.ok();
@@ -115,7 +126,7 @@ public class ArticleController {
     @OptLog(optType = UPLOAD)
     @ApiOperation("上传文章图片")
     @ApiImplicitParam(name = "file", value = "文章图片", required = true, dataType = "MultipartFile")
-    @PostMapping("/admin/articles/images")
+    @PostMapping({"/admin/articles/images","/articles/images"})
     public ResultVO<String> saveArticleImages(MultipartFile file) {
         return ResultVO.ok(uploadStrategyContext.executeUploadStrategy(file, FilePathEnum.ARTICLE.getPath()));
     }
@@ -124,6 +135,13 @@ public class ArticleController {
     @ApiImplicitParam(name = "articleId", value = "文章id", required = true, dataType = "Integer")
     @GetMapping("/admin/articles/{articleId}")
     public ResultVO<ArticleAdminViewDTO> getArticleBackById(@PathVariable("articleId") Integer articleId) {
+        return ResultVO.ok(articleService.getArticleByIdAdmin(articleId));
+    }
+
+    @ApiOperation("根据id查看前台编辑文章")
+    @ApiImplicitParam(name = "articleId", value = "文章id", required = true, dataType = "Integer")
+    @GetMapping("/articles/edit/{articleId}")
+    public ResultVO<ArticleAdminViewDTO> getArticleEditById(@PathVariable("articleId") Integer articleId) {
         return ResultVO.ok(articleService.getArticleByIdAdmin(articleId));
     }
 

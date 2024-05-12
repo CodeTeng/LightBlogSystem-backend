@@ -6,7 +6,6 @@ import com.aurora.config.cf.DisValue;
 import com.aurora.config.cf.RecommendUtil;
 import com.aurora.entity.*;
 import com.aurora.enums.ArticleReviewEnum;
-import com.aurora.enums.ArticleStatusEnum;
 import com.aurora.mapper.*;
 import com.aurora.model.dto.*;
 import com.aurora.enums.FileExtEnum;
@@ -25,11 +24,9 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.SneakyThrows;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +37,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static com.aurora.constant.CommonConstant.FALSE;
+import static com.aurora.constant.CommonConstant.TRUE;
 import static com.aurora.constant.RabbitMQConstant.SUBSCRIBE_EXCHANGE;
 import static com.aurora.constant.RedisConstant.*;
 import static com.aurora.enums.ArticleStatusEnum.*;
@@ -172,7 +171,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @SneakyThrows
     @Override
     public PageResultDTO<ArticleCardDTO> listArticlesByCategoryId(Integer categoryId) {
-        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<Article>().eq(Article::getCategoryId, categoryId);
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<Article>()
+                .eq(Article::getCategoryId, categoryId)
+                .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
         CompletableFuture<Integer> asyncCount = CompletableFuture.supplyAsync(() -> articleMapper.selectCount(queryWrapper));
         List<ArticleCardDTO> articles = articleMapper.getArticlesByCategoryId(PageUtil.getLimitCurrent(), PageUtil.getSize(), categoryId);
         return new PageResultDTO<>(articles, asyncCount.get());
@@ -183,6 +184,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     public ArticleDTO getArticleById(Integer articleId) {
         Article articleForCheck = articleMapper.selectOne(new LambdaQueryWrapper<Article>().eq(Article::getId, articleId));
         if (Objects.isNull(articleForCheck)) {
+            return null;
+        }
+        // 未通过审核
+        if (articleForCheck.getReview() == 0) {
             return null;
         }
         if (articleForCheck.getStatus().equals(2)) {
@@ -222,6 +227,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         article.setPreArticleCard(asyncPreArticle.get());
         article.setNextArticleCard(asyncNextArticle.get());
+        article.getAuthor().setId(articleForCheck.getUserId());
         return article;
     }
 
@@ -241,10 +247,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @SneakyThrows
     @Override
     public PageResultDTO<ArticleCardDTO> listArticlesByTagId(Integer tagId) {
-        LambdaQueryWrapper<ArticleTag> queryWrapper = new LambdaQueryWrapper<ArticleTag>().eq(ArticleTag::getTagId, tagId);
-        CompletableFuture<Integer> asyncCount = CompletableFuture.supplyAsync(() -> articleTagMapper.selectCount(queryWrapper));
+        // 获取通过审核的文章的数量
+        Integer count =  articleTagMapper.getCountByTagId(tagId);
         List<ArticleCardDTO> articles = articleMapper.listArticlesByTagId(PageUtil.getLimitCurrent(), PageUtil.getSize(), tagId);
-        return new PageResultDTO<>(articles, asyncCount.get());
+        return new PageResultDTO<>(articles, count);
     }
 
     @SneakyThrows
@@ -289,6 +295,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public PageResultDTO<ArticleAdminDTO> listArticlesAdmin(ConditionVO conditionVO) {
         CompletableFuture<Integer> asyncCount = CompletableFuture.supplyAsync(() -> articleMapper.countArticleAdmins(conditionVO));
+
         List<ArticleAdminDTO> articleAdminDTOs = articleMapper.listArticlesAdmin(PageUtil.getLimitCurrent(), PageUtil.getSize(), conditionVO);
         Map<Object, Double> viewsCountMap = redisService.zAllScore(ARTICLE_VIEWS_COUNT);
         articleAdminDTOs.forEach(item -> {
@@ -303,6 +310,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdateArticle(ArticleVO articleVO) {
+        if(articleVO.getIsTop().equals(TRUE)){
+            resetArticleTop(UserUtil.getUserDetailsDTO().getUserInfoId());
+        }
         // 保存文章分类
         Category category = saveArticleCategory(articleVO);
         Article article = BeanCopyUtil.copyObject(articleVO, Article.class);
@@ -328,6 +338,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
     @Override
     public void updateArticleTopAndFeatured(ArticleTopFeaturedVO articleTopFeaturedVO) {
+        Article select = articleMapper.selectById(articleTopFeaturedVO.getId());
+        if(articleTopFeaturedVO.getIsTop().equals(TRUE)){
+            resetArticleTop(select.getUserId());
+        }
         Article article = Article.builder()
                 .id(articleTopFeaturedVO.getId())
                 .isTop(articleTopFeaturedVO.getIsTop())
@@ -513,16 +527,44 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         List<ArticleCardMap> map = new ArrayList<>();
         map.add(articleCardMap);
         List<ArticleCardDTO> articleCardDTOS = null;
-        if (isUserSelf) {
-            articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
+        if(isUserSelf){
+            articleCardDTOS = articleMapper.listArticleCards(PageUtil.getCurrent(), PageUtil.getSize(), false,
                     null, null, map);
         } else {
             // 查看别人的文章
-            articleCardDTOS = articleMapper.listArticleCards(0L, 0L, false,
+            articleCardDTOS = articleMapper.listArticleCards(PageUtil.getCurrent(), PageUtil.getSize(), false,
                     getStatusList(PUBLIC, SECRET), ArticleReviewEnum.OK_REVIEW.getReview(), map);
         }
 
-        return new PageResultDTO<>(articleCardDTOS, articleCardDTOS.size());
+        LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Article::getUserId, userId);
+
+        if (!isUserSelf) {
+            wrapper.in(Article::getStatus, PUBLIC.getStatus(), SECRET.getStatus());
+            wrapper.eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
+        }
+        Integer count = articleMapper.selectCount(wrapper);
+
+        return new PageResultDTO<>(articleCardDTOS, count);
+    }
+
+    @Override
+    public void resetArticleTop(Integer userId) {
+        LambdaUpdateWrapper<Article> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Article::getUserId, userId).set(Article::getIsTop,FALSE);
+        articleMapper.update(null, wrapper);
+    }
+
+    @Override
+    public ArticleCardDTO getTopArticleByUserId(Integer userId) {
+        LambdaQueryWrapper<Article> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        lambdaQueryWrapper
+                .eq(Article::getUserId, userId)
+                .eq(Article::getIsTop,TRUE)
+                .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
+        List<Article> list = this.list(lambdaQueryWrapper);
+        if(list.isEmpty()) throw new BizException("用户未设置置顶文章");
+        return articleMapper.getArticleCardById(list.get(0).getId());
     }
 
 }

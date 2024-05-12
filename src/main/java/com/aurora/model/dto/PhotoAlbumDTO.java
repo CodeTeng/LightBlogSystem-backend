@@ -19,4 +19,6 @@ public class PhotoAlbumDTO {
 
     private String albumCover;
 
+    private String photoCount;
+
 }
