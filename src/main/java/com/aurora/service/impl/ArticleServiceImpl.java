@@ -251,7 +251,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public PageResultDTO<ArticleCardDTO> listArticlesByTagId(Integer tagId) {
         // 获取通过审核的文章的数量
-        Integer count =  articleTagMapper.getCountByTagId(tagId);
+        Integer count = articleTagMapper.getCountByTagId(tagId);
         List<ArticleCardDTO> articles = articleMapper.listArticlesByTagId(PageUtil.getLimitCurrent(), PageUtil.getSize(), tagId);
         return new PageResultDTO<>(articles, count);
     }
@@ -259,9 +259,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @SneakyThrows
     @Override
     public PageResultDTO<ArchiveDTO> listArchives() {
-        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<Article>().eq(Article::getIsDelete, 0).eq(Article::getStatus, 1);
+        // 获取当前用户信息
+        UserDetailsDTO userDetailsDTO = UserUtil.getUserDetailsDTO();
+        Integer userInfoId = userDetailsDTO.getUserInfoId();
+        LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<Article>().eq(Article::getIsDelete, 0)
+                .eq(Article::getStatus, 1).eq(Article::getUserId, userInfoId);
         CompletableFuture<Integer> asyncCount = CompletableFuture.supplyAsync(() -> articleMapper.selectCount(queryWrapper));
-        List<ArticleCardDTO> articles = articleMapper.listArchives(PageUtil.getLimitCurrent(), PageUtil.getSize());
+        List<ArticleCardDTO> articles = articleMapper.listArchives(PageUtil.getLimitCurrent(), PageUtil.getSize(), userInfoId);
         HashMap<String, List<ArticleCardDTO>> map = new HashMap<>();
         for (ArticleCardDTO article : articles) {
             LocalDateTime createTime = article.getCreateTime();
@@ -313,7 +317,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdateArticle(ArticleVO articleVO) {
-        if(articleVO.getIsTop().equals(TRUE)){
+        if (articleVO.getIsTop().equals(TRUE)) {
             resetArticleTop(UserUtil.getUserDetailsDTO().getUserInfoId());
         }
         // 保存文章分类
@@ -342,7 +346,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public void updateArticleTopAndFeatured(ArticleTopFeaturedVO articleTopFeaturedVO) {
         Article select = articleMapper.selectById(articleTopFeaturedVO.getId());
-        if(articleTopFeaturedVO.getIsTop().equals(TRUE)){
+        if (articleTopFeaturedVO.getIsTop().equals(TRUE)) {
             resetArticleTop(select.getUserId());
         }
         Article article = Article.builder()
@@ -478,7 +482,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Transactional(rollbackFor = Exception.class)
     public void saveOrUpdateArticleScore(ArticleScoreDTO articleScoreDTO) {
         boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
-        if(notLogin){
+        if (notLogin) {
             throw new BizException("用户需要登录");
         }
 
@@ -486,14 +490,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
         ArticleScore articleScore = articleScoreService.lambdaQuery()
                 .eq(ArticleScore::getArticleId, articleScoreDTO.getArticleId())
-                .eq(ArticleScore::getUserId,userId )
+                .eq(ArticleScore::getUserId, userId)
                 .one();
         if (Objects.nonNull(articleScore)) {
             // 存在评分
             articleScore.setScore(articleScoreDTO.getScore());
             articleScoreService.updateById(articleScore);
-        }
-        else {
+        } else {
             // 添加分数到数据库
             articleScore = new ArticleScore();
             articleScore.setArticleId(articleScoreDTO.getArticleId());
@@ -507,14 +510,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public Integer getArticleScore(Long articleId) {
         boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
-        if(notLogin) return 0;
+        if (notLogin) return 0;
 
         Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
         ArticleScore articleScore = articleScoreService.lambdaQuery()
                 .eq(ArticleScore::getArticleId, articleId)
                 .eq(ArticleScore::getUserId, userId)
                 .one();
-        if(articleScore == null) {
+        if (articleScore == null) {
             return 0;
         }
         return articleScore.getScore();
@@ -524,17 +527,16 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     public PageResultDTO<ArticleCardDTO> listArticlesByUserId(Integer userId) {
         // 判断是否为登录用户在获取文章
         boolean isUserSelf = UserUtil.getUserDetailsDTO().getUserInfoId().equals(userId);
-
         ArticleCardMap articleCardMap = new ArticleCardMap();
         articleCardMap.setKey("user_id");
         articleCardMap.setValue(Integer.toString(userId));
         List<ArticleCardMap> map = new ArrayList<>();
         map.add(articleCardMap);
         List<ArticleCardDTO> articleCardDTOS = null;
-        if(isUserSelf){
+        if (isUserSelf) {
             articleCardDTOS = articleMapper.listArticleCards(PageUtil.getCurrent(), PageUtil.getSize(), false,
                     null, null, map);
-        }else{
+        } else {
             // 查看别人的文章
             articleCardDTOS = articleMapper.listArticleCards(PageUtil.getCurrent(), PageUtil.getSize(), false,
                     getStatusList(PUBLIC, SECRET), ArticleReviewEnum.OK_REVIEW.getReview(), map);
@@ -555,7 +557,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Override
     public void resetArticleTop(Integer userId) {
         LambdaUpdateWrapper<Article> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(Article::getUserId, userId).set(Article::getIsTop,FALSE);
+        wrapper.eq(Article::getUserId, userId).set(Article::getIsTop, FALSE);
         articleMapper.update(null, wrapper);
     }
 
@@ -564,10 +566,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         LambdaQueryWrapper<Article> lambdaQueryWrapper = new LambdaQueryWrapper<>();
         lambdaQueryWrapper
                 .eq(Article::getUserId, userId)
-                .eq(Article::getIsTop,TRUE)
+                .eq(Article::getIsTop, TRUE)
                 .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
         List<Article> list = this.list(lambdaQueryWrapper);
-        if(list.isEmpty()) throw new BizException("用户未设置置顶文章");
+        if (list.isEmpty()) throw new BizException("用户未设置置顶文章");
         return articleMapper.getArticleCardById(list.get(0).getId());
     }
 
