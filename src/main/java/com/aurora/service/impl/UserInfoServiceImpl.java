@@ -268,7 +268,7 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
         Integer articlesCount = articleService.lambdaQuery()
                 .eq(Article::getUserId, userInfoId)
                 .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview())
-                .eq(Article::getStatus, ArticleStatusEnum.PUBLIC.getStatus())
+                .ne(Article::getStatus, ArticleStatusEnum.DRAFT.getStatus())
                 .count();
         // 查询用户的说说数量
         Integer talksCount = talkService.lambdaQuery().eq(Talk::getUserId, userInfoId).count();
