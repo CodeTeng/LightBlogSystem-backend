@@ -34,7 +34,7 @@ public interface ArticleMapper extends BaseMapper<Article> {
 
     List<ArticleCardDTO> listArticlesByTagId(@Param("current") Long current, @Param("size") Long size, @Param("tagId") Integer tagId);
 
-    List<ArticleCardDTO> listArchives(@Param("current") Long current, @Param("size") Long size);
+    List<ArticleCardDTO> listArchives(@Param("current") Long current, @Param("size") Long size, @Param("userInfoId") Integer userInfoId);
 
     Integer countArticleAdmins(@Param("conditionVO") ConditionVO conditionVO);
 

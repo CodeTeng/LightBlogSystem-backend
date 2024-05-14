@@ -80,7 +80,7 @@ public class ArticleController {
         return ResultVO.ok(articleService.listArticlesByTagId(tagId));
     }
 
-    @ApiOperation("获取所有文章归档")
+    @ApiOperation("获取个人所有文章归档")
     @GetMapping("/archives/all")
     public ResultVO<PageResultDTO<ArchiveDTO>> listArchives() {
         return ResultVO.ok(articleService.listArchives());

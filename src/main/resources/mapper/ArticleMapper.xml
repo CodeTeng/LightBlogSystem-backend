@@ -426,6 +426,7 @@
         FROM t_article
         WHERE is_delete = 0
           and (status = 1 or status = 2)
+          and user_id = #{userInfoId}
         ORDER BY create_time DESC
         LIMIT #{current}, #{size}
     </select>
