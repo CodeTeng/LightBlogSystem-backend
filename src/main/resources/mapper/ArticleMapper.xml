@@ -632,13 +632,16 @@
             <if test="review!=null">
                 review = #{review} and
             </if>
-            <foreach collection="mapList" item="item" separator=" and ">
-                ${item.key} = #{item.value}
-            </foreach>
+            <if test="mapList!=null">
+                <foreach collection="mapList" item="item" separator=" and ">
+                    ${item.key} = ${item.value}
+                </foreach>
+            </if>
         </where>
-        order by id desc
-        <if test="current!=null and size!=null and current gte 0 and size gte 0">
-            LIMIT #{current} , #{size}
+        order by id asc
+
+        <if test="current!=null">
+            LIMIT #{current},#{size}
         </if>
         ) a
         LEFT JOIN t_article_tag at
@@ -654,5 +657,56 @@
         where user_id = #{userId}
         GROUP BY date
         ORDER BY date DESC
+    </select>
+
+
+    <select id="selectTopTenArticleCardsByScore" resultMap="ArticleCardDTOResultMap">
+
+        SELECT a.id                            AS id,
+               article_cover,
+               article_title,
+               if(article_abstract is null or article_abstract = '', SUBSTR(article_content, 1, 500), article_abstract) AS article_content,
+               is_top,
+               is_featured,
+               status,
+               a.create_time                   AS create_time,
+               a.update_time                   AS update_time,
+               u.nickname                      AS author_nickname,
+               u.website                       AS author_website,
+               u.avatar                        AS author_avatar,
+               c.category_name                 AS category_name,
+               tag_name
+        FROM (SELECT id,
+                     user_id,
+                     category_id,
+                     article_cover,
+                     article_title,
+                     article_abstract,
+                     article_content,
+                     is_top,
+                     is_featured,
+                     is_delete,
+                     status,
+                     create_time,
+                     update_time
+              FROM t_article
+              WHERE id IN (
+
+                  SELECT article_id FROM (
+                                             SELECT article_id,SUM(tas.score) AS total_score
+                                             FROM t_article_score tas
+                                             GROUP BY tas.article_id
+                                             ORDER BY total_score DESC
+                                             LIMIT 10
+                                         ) my_t
+              )
+                and is_delete = 0
+                and status in (1, 2)
+             ) a
+                 LEFT JOIN t_article_tag at
+                           ON a.id = at.article_id
+                 LEFT JOIN t_tag t ON t.id = at.tag_id
+                 LEFT JOIN t_category c ON a.category_id = c.id
+                 LEFT JOIN t_user_info u ON a.user_id = u.id
     </select>
 </mapper>

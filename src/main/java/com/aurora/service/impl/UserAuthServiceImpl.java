@@ -2,6 +2,8 @@ package com.aurora.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.aurora.constant.CommonConstant;
+import com.aurora.entity.ArticleScore;
+import com.aurora.mapper.ArticleScoreMapper;
 import com.aurora.model.dto.*;
 import com.aurora.entity.UserAuth;
 import com.aurora.entity.UserInfo;
@@ -23,6 +25,7 @@ import com.aurora.model.vo.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.SneakyThrows;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
@@ -44,7 +47,7 @@ import static com.aurora.util.CommonUtil.getRandomCode;
 
 
 @Service
-public class UserAuthServiceImpl implements UserAuthService {
+public class UserAuthServiceImpl extends ServiceImpl<UserAuthMapper,UserAuth> implements UserAuthService {
 
     @Autowired
     private UserAuthMapper userAuthMapper;

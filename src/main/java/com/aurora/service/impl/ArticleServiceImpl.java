@@ -25,6 +25,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -46,6 +47,7 @@ import static com.aurora.enums.ArticleStatusEnum.*;
 import static com.aurora.enums.StatusCodeEnum.ARTICLE_ACCESS_FAIL;
 
 @Service
+@Slf4j
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
 
     @Autowired
@@ -132,28 +134,40 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
         // 获得推荐文章Id
         boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
+
         if(notLogin){
-            articleCardDTOs.remove(0);
-            topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOs);
+            // 获得分数最高的两个文章
+            List<ArticleCardDTO> articleCardDTOS = articleMapper.selectTopTenArticleCardsByScore();
+            topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOS.subList(0,2));
         }else{
-            List<ArticleScore> list = articleScoreService.list();
-            Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
-            List<DisValue> recommends = RecommendUtil.recommend(userId, list, CfConstant.User_CF_TYPE);
-            System.out.println(recommends);
-            Long articleId1 = articleScoreService.lambdaQuery()
-                    .eq(ArticleScore::getUserId, recommends.get(0).getKeyId())
-                    .orderByDesc(ArticleScore::getScore)
-                    .list().get(0).getArticleId();
-            Long articleId2 = articleScoreService.lambdaQuery()
-                    .eq(ArticleScore::getUserId, recommends.get(1).getKeyId())
-                    .orderByDesc(ArticleScore::getScore)
-                    .list().get(0).getArticleId();
-            ArticleCardDTO article1 = articleMapper.getArticleCardById(Math.toIntExact(articleId1));
-            ArticleCardDTO article2 = articleMapper.getArticleCardById(Math.toIntExact(articleId2));
-            List<ArticleCardDTO> featuredArticles = new ArrayList<>(2);
-            featuredArticles.add(article1);
-            featuredArticles.add(article2);
-            topAndFeaturedArticlesDTO.setFeaturedArticles(featuredArticles);
+            //
+            LambdaQueryWrapper<ArticleScore> countWrapper = new LambdaQueryWrapper<>();
+            countWrapper.eq(ArticleScore::getUserId,UserUtil.getUserDetailsDTO().getUserInfoId() );
+            int count = articleScoreService.count(countWrapper);
+            if (count <=2) {
+                // 获得分数最高的两个文章
+                List<ArticleCardDTO> articleCardDTOS = articleMapper.selectTopTenArticleCardsByScore();
+                topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOS.subList(0,2));
+            }else{
+                List<ArticleScore> list = articleScoreService.list();
+                Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
+                // 获得的用户列表
+                List<DisValue> recommends = RecommendUtil.recommend(userId, list, CfConstant.User_CF_TYPE);
+                Long articleId1 = articleScoreService.lambdaQuery()
+                        .eq(ArticleScore::getUserId, recommends.get(0).getKeyId())
+                        .orderByDesc(ArticleScore::getScore)
+                        .list().get(0).getArticleId();
+                Long articleId2 = articleScoreService.lambdaQuery()
+                        .eq(ArticleScore::getUserId, recommends.get(1).getKeyId())
+                        .orderByDesc(ArticleScore::getScore)
+                        .list().get(0).getArticleId();
+                ArticleCardDTO article1 = articleMapper.getArticleCardById(Math.toIntExact(articleId1));
+                ArticleCardDTO article2 = articleMapper.getArticleCardById(Math.toIntExact(articleId2));
+                List<ArticleCardDTO> featuredArticles = new ArrayList<>(2);
+                featuredArticles.add(article1);
+                featuredArticles.add(article2);
+                topAndFeaturedArticlesDTO.setFeaturedArticles(featuredArticles);
+            }
         }
 
         return topAndFeaturedArticlesDTO;
@@ -193,7 +207,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (articleForCheck.getReview() == 0) {
             return null;
         }
-        if (articleForCheck.getStatus().equals(2)) {
+        //
+        boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
+        if(notLogin){
             Boolean isAccess;
             try {
                 isAccess = redisService.sIsMember(ARTICLE_ACCESS + UserUtil.getUserDetailsDTO().getId(), articleId);
@@ -203,7 +219,22 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             if (isAccess.equals(false)) {
                 throw new BizException(ARTICLE_ACCESS_FAIL);
             }
+        }else {
+            boolean isLoginUser = articleForCheck.getUserId().equals(UserUtil.getUserDetailsDTO().getUserInfoId());
+            if (articleForCheck.getStatus().equals(2)&&!isLoginUser) {
+                Boolean isAccess;
+                try {
+                    isAccess = redisService.sIsMember(ARTICLE_ACCESS + UserUtil.getUserDetailsDTO().getId(), articleId);
+                } catch (Exception exception) {
+                    throw new BizException(ARTICLE_ACCESS_FAIL);
+                }
+                if (isAccess.equals(false)) {
+                    throw new BizException(ARTICLE_ACCESS_FAIL);
+                }
+            }
         }
+
+
         updateArticleScore(articleId, 1D);
         CompletableFuture<ArticleDTO> asyncArticle = CompletableFuture.supplyAsync(() -> articleMapper.getArticleById(articleId));
         CompletableFuture<ArticleCardDTO> asyncPreArticle = CompletableFuture.supplyAsync(() -> {
@@ -534,11 +565,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         map.add(articleCardMap);
         List<ArticleCardDTO> articleCardDTOS = null;
         if (isUserSelf) {
-            articleCardDTOS = articleMapper.listArticleCards(PageUtil.getCurrent(), PageUtil.getSize(), false,
+            articleCardDTOS = articleMapper.listArticleCards(PageUtil.getLimitCurrent(), PageUtil.getSize(), false,
                     null, null, map);
         } else {
             // 查看别人的文章
-            articleCardDTOS = articleMapper.listArticleCards(PageUtil.getCurrent(), PageUtil.getSize(), false,
+            articleCardDTOS = articleMapper.listArticleCards(PageUtil.getLimitCurrent(), PageUtil.getSize(), false,
                     getStatusList(PUBLIC, SECRET), ArticleReviewEnum.OK_REVIEW.getReview(), map);
         }
 
@@ -569,8 +600,26 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                 .eq(Article::getIsTop, TRUE)
                 .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
         List<Article> list = this.list(lambdaQueryWrapper);
-        if (list.isEmpty()) throw new BizException("用户未设置置顶文章");
+        if (list.isEmpty()) {
+            log.error("用户({})未设置置顶文章",userId);
+            return null;
+        };
         return articleMapper.getArticleCardById(list.get(0).getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean updateArticleCardInfo(ArticleCardDTO cardDTO) {
+        if(cardDTO.getId()==null) throw new BizException("文章id不能为空");
+        Article article = new Article();
+        if(cardDTO.getIsTop().equals(1)){
+            this.lambdaUpdate().set(Article::getIsTop, FALSE).eq(Article::getUserId, UserUtil.getUserDetailsDTO().getUserInfoId()).update();
+        }
+        article.setIsTop(cardDTO.getIsTop());
+        article.setIsFeatured(cardDTO.getIsFeatured());
+        article.setId(cardDTO.getId());
+        article.setStatus(cardDTO.getStatus());
+        return this.updateById(article);
     }
 
 }

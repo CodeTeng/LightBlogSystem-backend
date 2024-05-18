@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
 
+import java.util.Collections;
 import java.util.List;
 
 import static com.aurora.constant.CommonConstant.TRUE;
@@ -48,6 +49,11 @@ public class ArticleController {
         return ResultVO.ok(articleService.getTopArticleByUserId(userId));
     }
 
+    @ApiOperation("前台更新文章卡片信息")
+    @PutMapping("/articles/card")
+    public ResultVO<Boolean> updateArticleCardInfo(@RequestBody  ArticleCardDTO cardDTO) {
+        return ResultVO.ok(articleService.updateArticleCardInfo(cardDTO));
+    }
 
     @ApiOperation("获取所有文章")
     @GetMapping("/articles/all")
@@ -114,6 +120,17 @@ public class ArticleController {
         articleService.updateArticleDelete(deleteVO);
         return ResultVO.ok();
     }
+
+    @ApiOperation("前台删除文章")
+    @DeleteMapping("/articles/{articleId}")
+    public ResultVO<?> updateArticleDelete(@PathVariable("articleId") Integer articleId) {
+        DeleteVO deleteVO = new DeleteVO();
+        deleteVO.setIds(Collections.singletonList(articleId));
+        deleteVO.setIsDelete(1);
+        articleService.updateArticleDelete(deleteVO);
+        return ResultVO.ok();
+    }
+
 
     @OptLog(optType = DELETE)
     @ApiOperation(value = "物理删除文章")

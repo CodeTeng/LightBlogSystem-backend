@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.aurora.constant.OptTypeConstant.*;
@@ -66,9 +67,19 @@ public class TalkController {
 
     @OptLog(optType = DELETE)
     @ApiOperation(value = "删除说说")
-    @DeleteMapping({"/admin/talks","/talks"})
+    @DeleteMapping("/admin/talks")
     public ResultVO<?> deleteTalks(@RequestBody List<Integer> talkIds) {
         talkService.deleteTalks(talkIds);
+        return ResultVO.ok();
+    }
+
+    @OptLog(optType = DELETE)
+    @ApiOperation(value = "删除说说")
+    @DeleteMapping("/talks/{talkId}")
+    public ResultVO<?> deleteTalkById(@PathVariable("talkId") Integer talkId) {
+        ArrayList<Integer> list = new ArrayList<>();
+        list.add(talkId);
+        talkService.deleteTalks(list);
         return ResultVO.ok();
     }
 

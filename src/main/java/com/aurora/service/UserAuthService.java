@@ -1,12 +1,14 @@
 package com.aurora.service;
 
+import com.aurora.entity.UserAuth;
 import com.aurora.model.dto.*;
 import com.aurora.model.vo.*;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
 import java.util.Map;
 
-public interface UserAuthService {
+public interface UserAuthService extends IService<UserAuth> {
 
     void sendCode(String username);
 

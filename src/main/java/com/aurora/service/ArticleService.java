@@ -86,4 +86,11 @@ public interface ArticleService extends IService<Article> {
      * @return
      */
     ArticleCardDTO getTopArticleByUserId(Integer userId);
+
+    /**
+     * 更新文章卡片信息
+     * @param cardDTO
+     * @return
+     */
+    Boolean updateArticleCardInfo(ArticleCardDTO cardDTO);
 }

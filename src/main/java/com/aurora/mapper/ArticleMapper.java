@@ -61,5 +61,12 @@ public interface ArticleMapper extends BaseMapper<Article> {
                                           );
 
     List<ArticleStatisticsDTO> listUserArticleStatistics(@Param("userId") Integer userId);
+
+    /**
+     * 获得分数最高的两篇文章
+     *
+     * @return
+     */
+    List<ArticleCardDTO> selectTopTenArticleCardsByScore();
 }
 
