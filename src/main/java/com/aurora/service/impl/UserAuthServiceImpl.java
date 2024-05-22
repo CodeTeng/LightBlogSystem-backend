@@ -202,19 +202,20 @@ public class UserAuthServiceImpl extends ServiceImpl<UserAuthMapper,UserAuth> im
     @Override
     public List<UserActiveDTO> selectUserActiveData() {
         LocalDateTime now = LocalDateTime.now();
+        // (0~1] (1-3] (3-7] (7-15] (15-30] (30-+)
         Integer oneCount = userAuthMapper.selectCount(new LambdaQueryWrapper<UserAuth>().gt(UserAuth::getLastLoginTime, now.minusDays(1L)));
         Integer oneThreeCount = userAuthMapper.selectCount(new LambdaQueryWrapper<UserAuth>()
                 .gt(UserAuth::getLastLoginTime, now.minusDays(3L))
                 .le(UserAuth::getLastLoginTime, now.minusDays(1L)));
         Integer ThreeSevenCount = userAuthMapper.selectCount(new LambdaQueryWrapper<UserAuth>()
-                .gt(UserAuth::getLastLoginTime, now.minusDays(3L))
-                .le(UserAuth::getLastLoginTime, now.minusDays(7L)));
-        Integer sevenFiftyCount = userAuthMapper.selectCount(new LambdaQueryWrapper<UserAuth>()
                 .gt(UserAuth::getLastLoginTime, now.minusDays(7L))
-                .le(UserAuth::getLastLoginTime, now.minusDays(15L)));
-        Integer fiftyThirtyCount = userAuthMapper.selectCount(new LambdaQueryWrapper<UserAuth>()
+                .le(UserAuth::getLastLoginTime, now.minusDays(3L)));
+        Integer sevenFiftyCount = userAuthMapper.selectCount(new LambdaQueryWrapper<UserAuth>()
                 .gt(UserAuth::getLastLoginTime, now.minusDays(15L))
-                .le(UserAuth::getLastLoginTime, now.minusDays(30L)));
+                .le(UserAuth::getLastLoginTime, now.minusDays(7L)));
+        Integer fiftyThirtyCount = userAuthMapper.selectCount(new LambdaQueryWrapper<UserAuth>()
+                .gt(UserAuth::getLastLoginTime, now.minusDays(30L))
+                .le(UserAuth::getLastLoginTime, now.minusDays(15L)));
         Integer thirtyCount = userAuthMapper.selectCount(new LambdaQueryWrapper<UserAuth>().le(UserAuth::getLastLoginTime, now.minusDays(30L)));
         List<UserActiveDTO> list = new ArrayList<>(6);
         list.add(new UserActiveDTO("1天内", oneCount));
