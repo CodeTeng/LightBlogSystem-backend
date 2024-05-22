@@ -99,11 +99,26 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             topAndFeaturedArticlesDTO.setHotArticles(new ArrayList<>());
         } else {
             List<Integer> articleIds = new ArrayList<>(articleMap.size());
-            articleMap.forEach((key, value) -> articleIds.add((Integer) key));
-            List<Article> articleList = articleMapper.selectList(new LambdaQueryWrapper<Article>()
+            articleMap.entrySet().stream()
+                    .sorted(Map.Entry.<Object, Double>comparingByValue().reversed())
+                    .forEach(entry -> articleIds.add((Integer) entry.getKey()));
+//            articleMap.forEach((key, value) -> articleIds.add((Integer) key));
+            // 根据 articleIds 中的顺序 查出文章列表
+//            List<Article> articleList = articleMapper.selectList(new LambdaQueryWrapper<Article>()
+//                    .eq(Article::getIsDelete, 0).eq(Article::getReview, 1)
+//                    .in(Article::getStatus, 1, 2)
+//                    .in(Article::getId, articleIds));
+            // 修改为顺序
+            List<Article> dbArticleList = articleMapper.selectList(new LambdaQueryWrapper<Article>()
                     .eq(Article::getIsDelete, 0).eq(Article::getReview, 1)
-                    .in(Article::getStatus, 1, 2)
-                    .in(Article::getId, articleIds));
+                    .in(Article::getStatus, 1, 2));
+            List<Article> articleList = new ArrayList<>(articleIds.size());
+            articleIds.forEach(id -> {
+                Article article = dbArticleList.stream().filter(item -> item.getId().equals(id)).findFirst().orElse(null);
+                if (article != null) {
+                    articleList.add(article);
+                }
+            });
             List<ArticleCardDTO> hotArticles = new ArrayList<>(articleList.size());
             if (!articleList.isEmpty()) {
                 hotArticles = articleList.stream().map(article -> {
@@ -135,20 +150,20 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         // 获得推荐文章Id
         boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
 
-        if(notLogin){
+        if (notLogin) {
             // 获得分数最高的两个文章
             List<ArticleCardDTO> articleCardDTOS = articleMapper.selectTopTenArticleCardsByScore();
-            topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOS.subList(0,2));
-        }else{
+            topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOS.subList(0, 2));
+        } else {
             //
             LambdaQueryWrapper<ArticleScore> countWrapper = new LambdaQueryWrapper<>();
-            countWrapper.eq(ArticleScore::getUserId,UserUtil.getUserDetailsDTO().getUserInfoId() );
+            countWrapper.eq(ArticleScore::getUserId, UserUtil.getUserDetailsDTO().getUserInfoId());
             int count = articleScoreService.count(countWrapper);
-            if (count <=2) {
+            if (count <= 2) {
                 // 获得分数最高的两个文章
                 List<ArticleCardDTO> articleCardDTOS = articleMapper.selectTopTenArticleCardsByScore();
-                topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOS.subList(0,2));
-            }else{
+                topAndFeaturedArticlesDTO.setFeaturedArticles(articleCardDTOS.subList(0, 2));
+            } else {
                 List<ArticleScore> list = articleScoreService.list();
                 Long userId = Long.valueOf(UserUtil.getUserDetailsDTO().getUserInfoId());
                 // 获得的用户列表
@@ -209,7 +224,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         }
         //
         boolean notLogin = UserUtil.getAuthentication().getPrincipal().toString().equals("anonymousUser");
-        if(notLogin){
+        if (notLogin) {
             Boolean isAccess;
             try {
                 isAccess = redisService.sIsMember(ARTICLE_ACCESS + UserUtil.getUserDetailsDTO().getId(), articleId);
@@ -219,9 +234,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             if (isAccess.equals(false)) {
                 throw new BizException(ARTICLE_ACCESS_FAIL);
             }
-        }else {
+        } else {
             boolean isLoginUser = articleForCheck.getUserId().equals(UserUtil.getUserDetailsDTO().getUserInfoId());
-            if (articleForCheck.getStatus().equals(2)&&!isLoginUser) {
+            if (articleForCheck.getStatus().equals(2) && !isLoginUser) {
                 Boolean isAccess;
                 try {
                     isAccess = redisService.sIsMember(ARTICLE_ACCESS + UserUtil.getUserDetailsDTO().getId(), articleId);
@@ -601,18 +616,19 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
                 .eq(Article::getReview, ArticleReviewEnum.OK_REVIEW.getReview());
         List<Article> list = this.list(lambdaQueryWrapper);
         if (list.isEmpty()) {
-            log.error("用户({})未设置置顶文章",userId);
+            log.error("用户({})未设置置顶文章", userId);
             return null;
-        };
+        }
+        ;
         return articleMapper.getArticleCardById(list.get(0).getId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateArticleCardInfo(ArticleCardDTO cardDTO) {
-        if(cardDTO.getId()==null) throw new BizException("文章id不能为空");
+        if (cardDTO.getId() == null) throw new BizException("文章id不能为空");
         Article article = new Article();
-        if(cardDTO.getIsTop().equals(1)){
+        if (cardDTO.getIsTop().equals(1)) {
             this.lambdaUpdate().set(Article::getIsTop, FALSE).eq(Article::getUserId, UserUtil.getUserDetailsDTO().getUserInfoId()).update();
         }
         article.setIsTop(cardDTO.getIsTop());
@@ -621,5 +637,4 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setStatus(cardDTO.getStatus());
         return this.updateById(article);
     }
-
 }
